@@ -1,6 +1,6 @@
 import os
 
-import hgmd as md
+from . import hgmd as md
 
 
 def main():
