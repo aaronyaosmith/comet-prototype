@@ -35,6 +35,10 @@ def main():
         tsne_path=(input_path + tsne_file),
         cluster_path=(input_path + cluster_file)
     )
+    # To get the complements of each gene, simply negate them. This makes
+    # sorting and our algorithms work in the "opposite direction."
+    for gene in cell_data.columns[3:]:
+        cell_data[gene + "_c"] = -cell_data[gene]
 
     # Enumerate clusters and process each individually in its own folder.
     # pair_data also contains singleton data, but singleton is just
@@ -43,7 +47,7 @@ def main():
     clusters.sort()
     for cluster in clusters:
         print("Processing cluster " + str(cluster) + "...")
-        cluster_path = output_path + "_cluster_" + str(cluster)
+        cluster_path = output_path + "/cluster_" + str(cluster) + "/"
         os.makedirs(cluster_path, exist_ok=True)
         print("Testing singletons...")
         singleton_data = md.singleton_test(cell_data, cluster, X, L)

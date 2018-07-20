@@ -1,6 +1,10 @@
 import pandas as pd
+import numpy as np
+import xlmhg as hg
+import scipy.stats as ss
 
 
+# TODO: Raise some exceptions!
 def get_cell_data(marker_path, tsne_path, cluster_path):
     """Parses cell data into a DataFrame.
 
@@ -26,9 +30,24 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
         ValueError: The files at marker_path, tsne_path, and cluster_path have
             inappropriate formatting.
     """
-    fun = pd.DataFrame()
-    fun['cluster'] = range(0, 10)
-    return fun
+
+    # TODO: make this not have to fiddle so much with the CSV; the CSV should
+    # already be in a nice format
+    cell_data = pd.read_csv(marker_path, sep=' ')
+    cell_data = cell_data.T
+    cluster_data = pd.read_csv(
+        cluster_path, engine='python', sep='\s+', header=None, index_col=0
+    )
+    # TODO: are these assignments necessary?
+    cluster_data = cluster_data.rename(index=str, columns={1: "cluster"})
+    tsne_data = pd.read_csv(
+        tsne_path, engine='python', sep='\s+', header=None, index_col=0
+    )
+    tsne_data = tsne_data.rename(index=str, columns={1: "tSNE_1", 2: "tSNE_2"})
+    cell_data = pd.concat(
+        [cluster_data, tsne_data, cell_data], axis=1, sort=True
+    )
+    return cell_data
 
 
 def singleton_test(cells, cluster, X, L):
@@ -83,7 +102,56 @@ def singleton_test(cells, cluster, X, L):
         than 0, or L is less than X or greater than the population size.
     """
 
-    return pd.DataFrame()
+    output = pd.DataFrame(columns=[
+        'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index', 'mHG_cutoff_value',
+        't_stat', 't_pval'
+    ])
+    for index, gene in enumerate(cells.columns[3:]):
+        # Do XL-mHG and t-test for selected gene.
+        # XL-mHG requires two list inputs, exp and v:
+        # exp is a DataFrame with column values: cluster, gene expression.
+        # Row values are cells.
+        # v is boolean list of cluster membership. Uses 1s and 0s rather than
+        # True and False.
+        # Both exp and v are sorted by expression (descending).
+        print(
+            "Testing " + str(gene) + "... [" + str(index + 1) + "/"
+            + str(len(cells.columns[3:])) + "]"
+        )
+        exp = cells[['cluster', gene]]
+        exp = exp.sort_values(by=gene, ascending=False)
+        v = np.array((exp['cluster'] == cluster).tolist()).astype(int)
+        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v, X=X, L=L)
+        mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
+        # "Slide up" the cutoff index to where the gene expression actually
+        # changes. I.e. for array [5.3 1.2 0 0 0 0], if index == 4, the cutoff
+        # value is 0 and thus the index should actually slide to 2.
+        # numpy.searchsorted works with ascending, not descending lists.
+        # Therefore, negate to make it work.
+        mHG_cutoff_index = np.searchsorted(
+            -exp[gene].values, -mHG_cutoff_value, side='left'
+        )
+        # TODO: reassigning sample and population every time is inefficient
+        sample = exp[exp['cluster'] == cluster]
+        population = exp[exp['cluster'] != cluster]
+        t_stat, t_pval = ss.ttest_ind(sample[gene], population[gene])
+        gene_data = pd.DataFrame(
+            {
+                'gene': gene, 'HG_stat': HG_stat, 'mHG_pval': mHG_pval,
+                'mHG_cutoff_index': mHG_cutoff_index,
+                'mHG_cutoff_value': mHG_cutoff_value,
+                't_stat': t_stat, 't_pval': t_pval,
+            },
+            index=[0]
+        )
+        output = output.append(gene_data, sort=False, ignore_index=True)
+
+    HG_rank = output['mHG_pval'].rank()
+    t_rank = output['t_pval'].rank()
+    combined_rank = pd.DataFrame({'rank': HG_rank + t_rank})
+    output = output.join(combined_rank)
+    output = output.sort_values(by='rank', ascending=True)
+    return output
 
 
 def pair_test(cells, singleton, cluster, min_exp_ratio):
