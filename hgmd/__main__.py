@@ -35,10 +35,6 @@ def main():
         tsne_path=(input_path + tsne_file),
         cluster_path=(input_path + cluster_file)
     )
-    # To get the complements of each gene, simply negate them. This makes
-    # sorting and our algorithms work in the "opposite direction."
-    for gene in cell_data.columns[3:]:
-        cell_data[gene + "_c"] = -cell_data[gene]
 
     # Enumerate clusters and process each individually in its own folder.
     # pair_data also contains singleton data, but singleton is just

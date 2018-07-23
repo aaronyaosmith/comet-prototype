@@ -31,6 +31,7 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
             inappropriate formatting.
     """
 
+    """
     # TODO: make this not have to fiddle so much with the CSV; the CSV should
     # already be in a nice format
     cell_data = pd.read_csv(marker_path, sep=' ')
@@ -48,7 +49,25 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
         [cluster_data, tsne_data, cell_data], axis=1, sort=True
     )
     return cell_data
-    # TODO: move complement data generation to this function from main?
+    """
+
+    # Simple data reading; assumes neat CSV format with comma delimiter. See
+    # output of data_gen for details
+    cell_data = pd.read_csv(marker_path, index_col=0)
+    cluster_data = pd.read_csv(cluster_path, header=None, index_col=0)
+    # TODO: are these assignments necessary?
+    cluster_data = cluster_data.rename(index=str, columns={1: "cluster"})
+    tsne_data = pd.read_csv(tsne_path, header=None, index_col=0)
+    tsne_data = tsne_data.rename(index=str, columns={1: "tSNE_1", 2: "tSNE_2"})
+    cell_data = pd.concat(
+        [cluster_data, tsne_data, cell_data], axis=1, sort=False
+    ).rename_axis(None)
+    # To get the complements of each gene, simply negate them. This makes
+    # sorting and our algorithms work in the "opposite direction."
+    for gene in cell_data.columns[3:]:
+        cell_data[gene + "_c"] = -cell_data[gene]
+
+    return cell_data
 
 
 def singleton_test(cells, cluster, X, L):
@@ -155,7 +174,7 @@ def singleton_test(cells, cluster, X, L):
     return output
 
 
-def pair_test(cells, singleton, cluster, min_exp_ratio):
+def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
     """Tests and ranks pairs of genes using the hypergeometric test.
 
 
@@ -190,7 +209,82 @@ def pair_test(cells, singleton, cluster, min_exp_ratio):
             [0.0,1.0].
     """
 
-    return pd.DataFrame()
+    # create matrices with specifications:
+    # cluster_product: each cell has row gene and column gene; value is number
+    # of cells in cluster expressing both
+    # not_cluster_product: same except counting number of cells not in cluster
+    # expressing both
+    cluster_list = cells.iloc[:, 0]
+    exp = pd.DataFrame()
+    for gene in cells.columns[3:]:
+        exp[gene] = (
+            cells[gene] > (
+                singleton[
+                    singleton['gene'] == gene
+                ]['mHG_cutoff_value'].iloc[0]
+            )
+        ).astype(int)
+
+    cluster_exp = exp[cluster_list == cluster]
+    not_cluster_exp = exp[cluster_list != cluster]
+    total_num = exp.shape[0]
+    cluster_size = cluster_exp.shape[0]
+    # DROP COLUMNS WITH cluster expression below threshold FROM ONLY MULTI DFs
+    dropped_genes = list([])
+    for gene in cluster_exp.columns:
+        if cluster_exp[gene].sum() / float(cluster_size) < min_exp_ratio:
+            dropped_genes.append(gene)
+
+    gene_list = np.setdiff1d(cluster_exp.columns.values, dropped_genes)
+    print(
+        "Dropped " + str(len(dropped_genes))
+        + " genes from multiple gene testing. Threshold is "
+        + str(min_exp_ratio)
+    )
+    cluster_product = cluster_exp.T.dot(cluster_exp)
+    not_cluster_product = not_cluster_exp.T.dot(not_cluster_exp)
+
+    output = pd.DataFrame(columns=['HG_stat'])
+    gene_count = len(gene_list)
+    for i in range(0, gene_count):
+        gene_A = gene_list[i]
+        print(
+            "[" + str(i+1) + "/" + str(gene_count) + "] Pairing "
+            + gene_A + "..."
+        )
+        # start gene_B iterating from index i+1 to prevent duplicate pairs
+        for gene_B in gene_list[i+1:]:
+            # don't pair genes with their complement
+            if gene_B is gene_A+"_c" or gene_A is gene_B+"_c":
+                continue
+
+            num_exp_in_cluster = cluster_product.loc[gene_A, gene_B]
+            num_expressed = (
+                num_exp_in_cluster +
+                not_cluster_product.loc[gene_A, gene_B]
+            )
+            # skip if no intersection exists
+            if num_expressed == 0:
+                continue
+
+            HG_stat = ss.hypergeom.sf(
+                num_exp_in_cluster,
+                total_num,
+                cluster_size,
+                num_expressed,
+                loc=1
+            )
+            gene_df = pd.DataFrame(
+                {'HG_stat': HG_stat, 'gene': gene_A, 'gene_B': gene_B},
+                index=[0]
+            )
+            output = output.append(gene_df, sort=False, ignore_index=True)
+
+    output = singleton.append(output, sort=False, ignore_index=True)
+    output = output.sort_values(by='HG_stat', ascending=True)
+    # put gene_B in the 2nd place
+    output = output[['gene'] + ['gene_B'] + output.columns.tolist()[1:-1]]
+    return output
 
 
 def find_TP_TN(cells, singleton, pair, cluster):

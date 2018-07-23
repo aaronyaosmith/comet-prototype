@@ -19,51 +19,75 @@ check for exceptions (yet!). Does not check for PDF correctness (yet!!).
 # TODO: PDFs (also update docstring!).
 
 import pandas as pd
-import numpy as np
+import pytest
 
 from hgmd import hgmd as hg
 
 
-def setup_module():
-    """Generates CSVs of all test data."""
+# TEST_DATA_FILE contains cluster, tSNE 1/2, and known gene data
+FOLDER = 'typical_data/'
+TEST_DATA_FILE = FOLDER + 'typical_data.csv'
+MARKER_FILE = FOLDER + 'markers.txt'
+TSNE_FILE = FOLDER + 'tsne.txt'
+CLUSTER_FILE = FOLDER + 'cluster.txt'
+SINGLETON_OUTPUT = FOLDER + 'singleton/'
+PAIR_OUTPUT = FOLDER + 'pair/'
+TP_TN_OUTPUT = FOLDER + 'TP_TN/'
+NUM_CELLS = 20
 
-    # TEST_DATA_FILE contains cluster, tSNE 1/2, and known gene data
-    TEST_DATA_FILE = 'typical_data.csv'
-    MARKER_FILE = 'markers.txt'
-    TSNE_FILE = 'tsne.txt'
-    CLUSTER_FILE = 'cluster.txt'
-    NUM_CELLS = 20
 
-    data = pd.read_csv(TEST_DATA_FILE)
-    cluster = data['cluster']
-    gene = pd.DataFrame()
+@pytest.fixture(scope='module')
+def csv_read_data():
+    return pd.read_csv(TEST_DATA_FILE, index_col=0).rename_axis(None)
 
-    for cluster_index in range(1, 4):
-        gene['cluster_' + str(cluster_index)] = (
-            pd.Series(np.random.rand(NUM_CELLS))
-            + ((cluster == cluster_index) * 10)
-        )
-        gene['not_cluster_' + str(cluster_index)] = (
-            pd.Series(np.random.rand(NUM_CELLS))
-            + ((cluster != cluster_index) * 10)
-        )
-        gene['maybe_cluster_' + str(cluster_index)] = (
-            pd.Series(np.random.rand(NUM_CELLS) * 5)
-            + ((cluster == cluster_index) * 5)
-        )
 
-    for i in range(1, 7):
-        gene['random_' + str(i)] = pd.Series(
-            np.random.rand(NUM_CELLS) * 15
-        )
-
-    data = data.join(gene).set_index('cell').rename_axis(None)
-    data['cluster'].to_csv(CLUSTER_FILE)
-    data[['tSNE_1', 'tSNE_2']].to_csv(TSNE_FILE)
-    data[data.columns[3:]].to_csv(MARKER_FILE)
+def assert_frame_equal(df1, df2):
+    """Equality for frames containing floats"""
+    df1.fillna(0)
+    df2.fillna(0)
+    return pd.testing.assert_frame_equal(df1, df2, check_dtype=False)
 
 
 class TestTypical:
-    def test_func(self):
-        x = 3
-        assert x is 4
+    def test_get_cell_data(self, csv_read_data):
+        func_data = hg.get_cell_data(
+            marker_path=MARKER_FILE,
+            tsne_path=TSNE_FILE,
+            cluster_path=CLUSTER_FILE
+        )
+        assert_frame_equal(csv_read_data, func_data)
+
+    def test_singleton_test(self, csv_read_data):
+        for cluster in csv_read_data['cluster'].unique():
+            func_data = hg.singleton_test(csv_read_data, cluster, 0, NUM_CELLS)
+            path = SINGLETON_OUTPUT + "cluster_" + str(cluster) + ".csv"
+            read_data = pd.read_csv(path, index_col=0).rename_axis(None)
+            assert_frame_equal(read_data, func_data)
+
+    def test_pair_test(self, csv_read_data):
+        for cluster in csv_read_data['cluster'].unique():
+            singleton_path = (
+                SINGLETON_OUTPUT + "cluster_" + str(cluster) + ".csv"
+            )
+            singleton = pd.read_csv(
+                singleton_path, index_col=0
+            ).rename_axis(None)
+            func_data = hg.pair_test(csv_read_data, singleton, cluster)
+            func_data.to_csv(PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv")
+
+    def test_find_TP_TN(self, csv_read_data):
+        for cluster in csv_read_data['cluster'].unique():
+            singleton_path = (
+                SINGLETON_OUTPUT + "cluster_" + str(cluster) + ".csv"
+            )
+            singleton = pd.read_csv(
+                singleton_path, index_col=0
+            ).rename_axis(None)
+            pair_path = (
+                PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv"
+            )
+            pair = pd.read_csv(
+                pair_path, index_col=0
+            ).rename_axis(None)
+            func_data = hg.find_TP_TN(csv_read_data, singleton, pair, cluster)
+            func_data.to_csv(PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv")
