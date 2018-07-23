@@ -20,14 +20,14 @@ def main():
     # TODO: get command line input instead of assigning directly
     input_path = '/home/aaron/Documents/hgmd/data/input/'
     output_path = '/home/aaron/Documents/hgmd/data/output/'
-    marker_file = '20180327_col_batch_1_2_3_tpm_combined_marker_mat.txt'
-    tsne_file = '20180327_col_batch_1_2_3_CCA_corrected_1_10_tSNE.txt'
-    cluster_file = '20180327_col_batch_1_2_3_CCA_corrected_1_10_clusters.txt'
-    X = 3
-    L = 750
+    marker_file = 'markers.txt'
+    tsne_file = 'tsne.txt'
+    cluster_file = 'cluster.txt'
+    X = 0
+    L = 20
     min_exp_ratio = 0.4
-    plot_pages = 60
-    plot_genes = 20
+    plot_pages = 10
+    plot_genes = 10
 
     print("Reading data...")
     cell_data = md.get_cell_data(
@@ -52,7 +52,9 @@ def main():
             cell_data, singleton_data, cluster, min_exp_ratio
         )
         print("Calculating true positive/negative rates...")
-        md.find_TP_TN(cell_data, singleton_data, pair_data, cluster)
+        singleton_data, pair_data = md.find_TP_TN(
+            cell_data, singleton_data, pair_data, cluster
+        )
         print("Saving to CSV...")
         singleton_data.to_csv(cluster_path + "singleton_data.csv")
         pair_data.to_csv(cluster_path + "pair_data.csv")

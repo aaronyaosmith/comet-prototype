@@ -1,7 +1,12 @@
+import re
+
 import pandas as pd
 import numpy as np
 import xlmhg as hg
 import scipy.stats as ss
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 # TODO: Raise some exceptions!
@@ -305,14 +310,74 @@ def find_TP_TN(cells, singleton, pair, cluster):
         cluster: The cluster of interest. Must be in cells['cluster'].values.
 
     Returns:
-        Nothing; argument DataFrames are edited directly.
+        singleton and pair with columns 'true_positive' and 'true_negative'
+        added.
 
     Raises:
         ValueError: cells, singleton, or pair is in an incorrect format, or
             cluster is not in cells['cluster'].values.
     """
 
-    pass
+    # TODO: column operations for efficiency
+    # TODO: stop code reuse
+    exp = pd.DataFrame()
+    for gene in cells.columns[3:]:
+        exp[gene] = (
+            cells[gene] > (
+                singleton[
+                    singleton['gene'] == gene
+                ]['mHG_cutoff_value'].iloc[0]
+            )
+        ).astype(int)
+
+    cluster_list = cells.iloc[:, 0]
+    cluster_exp = exp[cluster_list == cluster]
+    not_cluster_not_exp = 1 - exp[cluster_list != cluster]
+    TP_TN = pd.DataFrame()
+    TP_TN_singleton = pd.DataFrame()
+    for index, row in pair.iterrows():
+        gene = row['gene']
+        gene_B = row['gene_B']
+        if pd.isnull(gene_B):
+            true_positives = cluster_exp[gene].sum()
+            positives = exp[gene].sum()
+            true_negatives = not_cluster_not_exp[gene].sum()
+            negatives = cells.shape[0] - positives
+        elif pd.notnull(gene_B):
+            true_positives = cluster_exp[
+                cluster_exp[gene_B] == 1
+            ][gene].sum()
+            positives = true_positives = exp[
+                exp[gene_B] == 1
+            ][gene].sum()
+            true_negatives = not_cluster_not_exp[
+                not_cluster_not_exp[gene_B] == 1
+            ][gene].sum()
+            negatives = cells.shape[0] - positives
+        TP_rate = true_positives / float(positives)
+        TN_rate = true_negatives / float(negatives)
+        if pd.isnull(gene_B):
+            row_df_singleton = pd.DataFrame(
+                {
+                    'gene': gene, 'true_positive': TP_rate,
+                    'true_negative': TN_rate
+                }, index=[0]
+            )
+            TP_TN_singleton = TP_TN_singleton.append(
+                row_df_singleton, sort=False, ignore_index=False
+            )
+
+        row_df = pd.DataFrame(
+            {
+                'gene': gene, 'gene_B': gene_B, 'true_positive': TP_rate,
+                'true_negative': TN_rate
+            }, index=[0]
+        )
+        TP_TN = TP_TN.append(row_df, sort=False, ignore_index=True)
+
+    pair = pair.merge(TP_TN, how='outer')
+    singleton = singleton.merge(TP_TN_singleton, how='outer')
+    return singleton, pair
 
 
 def make_discrete_plots(cells, singleton, pair, plot_pages, path):
@@ -343,7 +408,82 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
             plot_pages is less than 1.
     """
 
-    pass
+    # TODO: stop code reuse
+    exp = pd.DataFrame()
+    for gene in cells.columns[3:]:
+        exp[gene] = (
+            cells[gene] > (
+                singleton[
+                    singleton['gene'] == gene
+                ]['mHG_cutoff_value'].iloc[0]
+            )
+        ).astype(int)
+
+    with PdfPages(path) as pdf:
+        for i in range(0, plot_pages):
+            print("Plotting discrete plot "+str(i+1)+" of "+str(plot_pages))
+            gene_A = pair['gene'].iloc[i]
+            gene_B = pair['gene_B'].iloc[i]
+
+            fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, figsize=(15, 5))
+
+            if pd.isnull(gene_B):
+                c = (exp[gene_A] == 1)
+                ax1.set_title("rank " + str(i+1) + ": " + gene_A)
+            else:
+                c = (exp[gene_A] == 1) & (exp[gene_B] == 1)
+                ax1.set_title(
+                    "rank " + str(i+1) + ": " + gene_A + "+" + gene_B
+                )
+
+            sc1 = ax1.scatter(
+                x=cells['tSNE_1'],
+                y=cells['tSNE_2'],
+                s=2,
+                c=c,
+                cmap=cm.get_cmap('bwr')
+            )
+            ax1.set_xlabel("tSNE_1")
+            ax1.set_ylabel("tSNE_2")
+            plt.colorbar(sc1, ax=ax1)
+
+            if not pd.isnull(gene_B):
+                sc2 = ax2.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=exp[gene_A],
+                    cmap=cm.get_cmap('bwr')
+                )
+                ax2.set_xlabel("tSNE_1")
+                ax2.set_ylabel("tSNE_2")
+                ax2.set_title(
+                    gene_A + " %.3f" %
+                    pair[
+                        (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
+                    ]['mHG_cutoff_value'].iloc[0]
+                )
+                plt.colorbar(sc2, ax=ax2)
+
+                sc3 = ax3.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=exp[gene_B],
+                    cmap=cm.get_cmap('bwr')
+                )
+                ax3.set_xlabel("tSNE_1")
+                ax3.set_ylabel("tSNE_2")
+                ax3.set_title(
+                    gene_B + " %.3f" %
+                    pair[
+                        (pair['gene'] == gene_B) & (pair['gene_B'].isnull())
+                    ]['mHG_cutoff_value'].iloc[0]
+                )
+                plt.colorbar(sc3, ax=ax3)
+
+            pdf.savefig(fig)
+            plt.close(fig)
 
 
 def make_combined_plots(
@@ -377,7 +517,181 @@ def make_combined_plots(
             plot_pages is less than 1.
     """
 
-    pass
+    # TODO: stop code reuse
+    exp = pd.DataFrame()
+    for gene in cells.columns[3:]:
+        exp[gene] = (
+            cells[gene] > (
+                singleton[
+                    singleton['gene'] == gene
+                ]['mHG_cutoff_value'].iloc[0]
+            )
+        ).astype(int)
+
+    with PdfPages(pair_path) as pdf:
+        for i in range(0, plot_pages):
+            print("Plotting combination plot "+str(i+1)+" of "+str(plot_pages))
+            # plot the cutoff
+            gene_A = pair['gene'].iloc[i]
+            gene_B = pair['gene_B'].iloc[i]
+
+            pattern = re.compile(r"^(.*)_c+$")
+            search_A = re.search(pattern, gene_A)
+            if search_A:
+                gene_A = search_A.group(1)
+                if pd.notnull(gene_B):
+                    search_B = re.search(pattern, gene_B)
+                    if search_B:
+                        gene_B = search_B.group(1)
+
+            # Graphs twogene and singlegene differently.
+            if not pd.isnull(gene_B):
+                fig, ((ax1a, ax1b), (ax2a, ax2b)) = plt.subplots(
+                    nrows=2, ncols=2, figsize=(10, 10)
+                )
+
+                sc1a = ax1a.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=exp[gene_A],
+                    cmap=cm.get_cmap('bwr')
+                )
+                ax1a.set_xlabel("tSNE_1")
+                ax1a.set_ylabel("tSNE_2")
+                ax1a.set_title(
+                    gene_A + " %.3f" %
+                    pair[
+                        (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
+                    ]['mHG_cutoff_value'].iloc[0]
+                )
+                plt.colorbar(sc1a, ax=ax1a)
+
+                sc1b = ax1b.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=cells[gene_A],
+                    cmap=cm.get_cmap('viridis')
+                )
+                ax1b.set_xlabel("tSNE_1")
+                ax1b.set_ylabel("tSNE_2")
+                ax1b.set_title(gene_A)
+                plt.colorbar(sc1b, ax=ax1b)
+
+                sc2a = ax2a.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=exp[gene_B],
+                    cmap=cm.get_cmap('bwr')
+                )
+                ax2a.set_xlabel("tSNE_1")
+                ax2a.set_ylabel("tSNE_2")
+                ax2a.set_title(
+                    gene_B + " %.3f" %
+                    pair[
+                        (pair['gene'] == gene_B) & (pair['gene_B'].isnull())
+                    ]['mHG_cutoff_value'].iloc[0]
+                )
+                plt.colorbar(sc2a, ax=ax2a)
+
+                sc2b = ax2b.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=cells[gene_B],
+                    cmap=cm.get_cmap('viridis')
+                )
+                ax2b.set_xlabel("tSNE_1")
+                ax2b.set_ylabel("tSNE_2")
+                ax2b.set_title(gene_B)
+                plt.colorbar(sc2b, ax=ax2b)
+            else:
+                fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10, 5))
+
+                sc1 = ax1.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=exp[gene_A],
+                    cmap=cm.get_cmap('bwr')
+                )
+                ax1.set_xlabel("tSNE_1")
+                ax1.set_ylabel("tSNE_2")
+                ax1.set_title(
+                    gene_A + " %.3f" %
+                    pair[
+                        (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
+                    ]['mHG_cutoff_value'].iloc[0]
+                )
+                plt.colorbar(sc1, ax=ax1)
+
+                sc2 = ax2.scatter(
+                    x=cells['tSNE_1'],
+                    y=cells['tSNE_2'],
+                    s=3,
+                    c=cells[gene_A],
+                    cmap=cm.get_cmap('viridis')
+                )
+                ax2.set_xlabel("tSNE_1")
+                ax2.set_ylabel("tSNE_2")
+                ax2.set_title(gene_A)
+                plt.colorbar(sc2, ax=ax2)
+
+            plt.tight_layout()
+            pdf.savefig(fig)
+            plt.close(fig)
+
+    with PdfPages(singleton_path) as pdf:
+        for i in range(0, plot_pages):
+            print(
+                "Plotting single combination plot " + str(i+1)
+                + " of " + str(plot_pages)
+            )
+
+            # plot the cutoff
+            gene = singleton['gene'].iloc[i]
+
+            pattern = re.compile(r"^(.*)_c+$")
+            search = re.search(pattern, gene)
+            if search:
+                gene = search.group(1)
+
+            fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10, 5))
+
+            sc1 = ax1.scatter(
+                x=cells['tSNE_1'],
+                y=cells['tSNE_2'],
+                s=3,
+                c=exp[gene],
+                cmap=cm.get_cmap('bwr')
+            )
+            ax1.set_xlabel("tSNE_1")
+            ax1.set_ylabel("tSNE_2")
+            ax1.set_title(
+                gene + " %.3f" %
+                singleton[
+                    singleton['gene'] == gene
+                ]['mHG_cutoff_value'].iloc[0]
+            )
+            plt.colorbar(sc1, ax=ax1)
+
+            sc2 = ax2.scatter(
+                x=cells['tSNE_1'],
+                y=cells['tSNE_2'],
+                s=3,
+                c=cells[gene],
+                cmap=cm.get_cmap('viridis')
+            )
+            ax2.set_xlabel("tSNE_1")
+            ax2.set_ylabel("tSNE_2")
+            ax2.set_title(gene)
+            plt.colorbar(sc2, ax=ax2)
+
+            plt.tight_layout()
+            pdf.savefig(fig)
+            plt.close(fig)
 
 
 def make_TP_TN_plots(
@@ -392,10 +706,10 @@ def make_TP_TN_plots(
 
     Args:
         cells: A DataFrame with format matching those returned by
-            get_cell_data. Row values are cell identifiers, columns are first
-            cluster identifier, then tSNE_1 and tSNE_2, then gene names.
+        get_cell_data. Row values are cell identifiers, columns are first
+        cluster identifier, then tSNE_1 and tSNE_2, then gene names.
         singleton: A DataFrame with format matching those returned by
-            singleton_test.
+        singleton_test.
         pair: A DataFrame with format matching those returned by pair_test.
         plot_genes: Number of genes/pairs to plot. More is messier!
         pair_path: Save the full plot pdf here.
@@ -406,7 +720,36 @@ def make_TP_TN_plots(
 
     Raises:
         ValueError: cells, singleton, or pair is in an incorrect format,
-            plot_pages is less than 1.
+        plot_pages is less than 1.
     """
+    fig = plt.figure(figsize=[15, 15])
+    plt.xlabel("True positive")
+    plt.ylabel("True negative")
+    plt.title("True positive/negative")
 
-    pass
+    for i in range(0, 20):
+        row = pair.iloc[i]
+        if pd.isnull(row['gene_B']):
+            plt.annotate(
+                row['gene'], (row['true_positive'], row['true_negative'])
+            )
+        else:
+            plt.annotate(
+                row['gene'] + "+" + row['gene_B'],
+                (row['true_positive'], row['true_negative'])
+            )
+
+    fig.savefig(pair_path)
+    plt.close(fig)
+
+    fig = plt.figure(figsize=[15, 15])
+    plt.xlabel("True positive")
+    plt.ylabel("True negative")
+    plt.title("True positive/negative")
+
+    for i in range(0, 20):
+        row = singleton.iloc[i]
+        plt.annotate(row['gene'], (row['true_positive'], row['true_negative']))
+
+    fig.savefig(singleton_path)
+    plt.close(fig)

@@ -89,5 +89,10 @@ class TestTypical:
             pair = pd.read_csv(
                 pair_path, index_col=0
             ).rename_axis(None)
-            func_data = hg.find_TP_TN(csv_read_data, singleton, pair, cluster)
-            func_data.to_csv(PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv")
+            singleton, pair = hg.find_TP_TN(
+                csv_read_data, singleton, pair, cluster
+            )
+            singleton.to_csv(
+                TP_TN_OUTPUT + "singleton_cluster_" + str(cluster) + ".csv"
+            )
+            pair.to_csv(TP_TN_OUTPUT + "pair_cluster_" + str(cluster) + ".csv")
