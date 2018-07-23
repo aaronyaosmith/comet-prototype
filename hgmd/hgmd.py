@@ -48,6 +48,7 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
         [cluster_data, tsne_data, cell_data], axis=1, sort=True
     )
     return cell_data
+    # TODO: move complement data generation to this function from main?
 
 
 def singleton_test(cells, cluster, X, L):
