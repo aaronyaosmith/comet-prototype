@@ -61,8 +61,8 @@ class TestTypical:
         for cluster in csv_read_data['cluster'].unique():
             func_data = hg.singleton_test(csv_read_data, cluster, 0, NUM_CELLS)
             path = SINGLETON_OUTPUT + "cluster_" + str(cluster) + ".csv"
-            read_data = pd.read_csv(path, index_col=0).rename_axis(None)
-            assert_frame_equal(read_data, func_data)
+            expected = pd.read_csv(path, index_col=0).rename_axis(None)
+            assert_frame_equal(expected, func_data)
 
     def test_pair_test(self, csv_read_data):
         for cluster in csv_read_data['cluster'].unique():
@@ -73,7 +73,11 @@ class TestTypical:
                 singleton_path, index_col=0
             ).rename_axis(None)
             func_data = hg.pair_test(csv_read_data, singleton, cluster)
-            func_data.to_csv(PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv")
+            expected = pd.read_csv(
+                PAIR_OUTPUT + "cluster_" + str(cluster) + ".csv",
+                index_col=0
+            )
+            assert_frame_equal(expected, func_data)
 
     def test_find_TP_TN(self, csv_read_data):
         for cluster in csv_read_data['cluster'].unique():
@@ -92,7 +96,13 @@ class TestTypical:
             singleton, pair = hg.find_TP_TN(
                 csv_read_data, singleton, pair, cluster
             )
-            singleton.to_csv(
-                TP_TN_OUTPUT + "singleton_cluster_" + str(cluster) + ".csv"
+            singleton_expected = pd.read_csv(
+                TP_TN_OUTPUT + "singleton_cluster_" + str(cluster) + ".csv",
+                index_col=0
             )
-            pair.to_csv(TP_TN_OUTPUT + "pair_cluster_" + str(cluster) + ".csv")
+            pair_expected = pd.read_csv(
+                TP_TN_OUTPUT + "pair_cluster_" + str(cluster) + ".csv",
+                index_col=0
+            )
+            assert_frame_equal(singleton_expected, singleton)
+            assert_frame_equal(pair_expected, pair)

@@ -23,8 +23,8 @@ def main():
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
-    X = 0
-    L = 20
+    X = 3
+    L = 8000
     min_exp_ratio = 0.4
     plot_pages = 10
     plot_genes = 10
