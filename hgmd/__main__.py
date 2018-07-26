@@ -1,4 +1,5 @@
 import os
+import argparse
 
 from . import hgmd as md
 
@@ -18,8 +19,25 @@ def main():
     # TODO: more precise description
 
     # TODO: get command line input instead of assigning directly
-    input_path = '/home/aaron/Documents/hgmd/data/input/'
-    output_path = '/home/aaron/Documents/hgmd/data/output/'
+    parser = argparse.ArgumentParser(
+        description=("Hypergeometric marker detection. Finds markers "
+                     "identifying a cluster.")
+    )
+    parser.add_argument(
+        'input_path', type=str,
+        help=("the input directory containing markers.txt, tsne.txt, and "
+              "cluster.txt.")
+    )
+    parser.add_argument(
+        'output_path', type=str,
+        help="the output directory where output files should go"
+    )
+    args = parser.parse_args()
+
+    input_path = args.input_path
+    output_path = args.output_path
+    # input_path = '/home/aaron/Documents/hgmd/data/input/'
+    # output_path = '/home/aaron/Documents/hgmd/data/output/'
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
