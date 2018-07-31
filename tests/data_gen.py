@@ -1,4 +1,4 @@
-"""This is run ONCE to generate test data"""
+"""Generates test data."""
 
 import pandas as pd
 import numpy as np
@@ -15,12 +15,14 @@ tSNE_2 = pd.Series(np.random.rand(NUM_CELLS)) + (cluster == 3)
 gene = pd.DataFrame()
 for cluster_index in range(1, 4):
     gene['cluster_' + str(cluster_index)] = (
+        # ((cluster == cluster_index) * 10)
         pd.Series(np.random.rand(NUM_CELLS) * 5)
         + ((cluster == cluster_index) * 10)
     )
     gene['not_cluster_' + str(cluster_index)] = (
-        pd.Series(np.random.rand(NUM_CELLS) * 5)
-        + ((cluster != cluster_index) * 10)
+        ((cluster != cluster_index) * 10)
+        # pd.Series(np.random.rand(NUM_CELLS) * 5)
+        # + ((cluster != cluster_index) * 10)
     )
     gene['maybe_cluster_' + str(cluster_index)] = (
         pd.Series(np.random.rand(NUM_CELLS) * 10)

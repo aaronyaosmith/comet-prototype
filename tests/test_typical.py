@@ -25,13 +25,13 @@ from hgmd import hgmd as hg
 
 
 # TEST_DATA_FILE contains cluster, tSNE 1/2, and known gene data
-INPUT_FOLDER = 'typical_data/input/'
-OUTPUT_FOLDER = 'typical_data/output/'
-TEST_DATA_FILE = 'typical_data/typical_data.csv'
+INPUT_FOLDER = '../../data/testing/typical_data/input/'
+OUTPUT_FOLDER = '../../data/testing/typical_data/output/'
+TEST_OUTPUT_FOLDER = '../../data/testing/typical_data/test_output/'
+TEST_DATA_FILE = '../../data/testing/typical_data/typical_data.csv'
 MARKER_FILE = INPUT_FOLDER + 'markers.txt'
 TSNE_FILE = INPUT_FOLDER + 'tsne.txt'
 CLUSTER_FILE = INPUT_FOLDER + 'cluster.txt'
-NUM_CELLS = 20
 
 
 @pytest.fixture(scope='module')
@@ -104,7 +104,10 @@ class TestTypical:
             func_data = hg.singleton_test(csv_read_data, cluster)
             func_data = func_data.reset_index(drop=True)
             expected = self.singleton_data(cluster)
-            func_data.to_csv('cluster_' + str(cluster) + '_singleton.csv')
+            func_data.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
+                + '_singleton.csv'
+            )
             assert_frame_equal(expected, func_data)
 
     def test_pair_test(self, csv_read_data):
@@ -113,7 +116,9 @@ class TestTypical:
             func_data = hg.pair_test(csv_read_data, singleton, cluster)
             func_data = func_data.reset_index(drop=True)
             expected = self.pair_data(cluster)
-            func_data.to_csv('cluster_' + str(cluster) + '_pair.csv')
+            func_data.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster) + '_pair.csv'
+            )
             assert_frame_equal(expected, func_data)
 
     def test_find_TP_TN(self, csv_read_data):
@@ -125,5 +130,13 @@ class TestTypical:
             )
             singleton_expected = self.TP_TN_singleton_data(cluster)
             pair_expected = self.TP_TN_data(cluster)
+            singleton.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
+                + '_TP_TN_singleton.csv'
+            )
+            pair.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
+                + '_TP_TN_pair.csv'
+            )
             assert_frame_equal(singleton_expected, singleton)
             assert_frame_equal(pair_expected, pair)

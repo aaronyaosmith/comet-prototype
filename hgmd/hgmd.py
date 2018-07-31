@@ -1,5 +1,4 @@
-import re
-
+# import re
 import pandas as pd
 import numpy as np
 import xlmhg as hg
@@ -9,17 +8,39 @@ from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 
+def round_to_6(input_value):
+    """Rounds a value to 6 significant figures."""
+
+    from decimal import ROUND_HALF_EVEN, Context
+    ctx = Context(prec=6, rounding=ROUND_HALF_EVEN)
+    return float(ctx.create_decimal(input_value))
+
+
 def fuzzy_rank(series):
     """Ranks a series of floats with 1e-6 relative fuzziness."""
-    def round_to_6(input_value):
-        """Rounds a value to 6 significant figures."""
-
-        from decimal import ROUND_HALF_EVEN, Context
-        ctx = Context(prec=6, rounding=ROUND_HALF_EVEN)
-        return float(ctx.create_decimal(input_value))
 
     series = series.apply(round_to_6)
     return series.rank()
+
+
+def get_discrete_exp(cells, singleton):
+    """Creates discrete expression matrix using given cutoff."""
+
+    exp = pd.DataFrame()
+    for gene in cells.columns[3:]:
+        cutoff = (
+            singleton[
+                singleton['gene'] == gene
+            ]['mHG_cutoff_value'].iloc[0]
+        )
+
+        equal = pd.Series(np.isclose(cells[gene], cutoff))
+        equal.index = cells.index
+        less_than = cells[gene] < cutoff
+        greater_than = ~(equal | less_than)
+        exp[gene] = greater_than.astype(int)
+
+    return exp
 
 
 # TODO: Raise some exceptions!
@@ -162,7 +183,7 @@ def singleton_test(cells, cluster):
         exp = cells[['cluster', gene]]
         exp = exp.sort_values(by=gene, ascending=False)
         v = np.array((exp['cluster'] == cluster).tolist()).astype(int)
-        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v, X=0)
+        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v)
         mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
         # "Slide up" the cutoff index to where the gene expression actually
         # changes. I.e. for array [5.3 1.2 0 0 0 0], if index == 4, the cutoff
@@ -245,16 +266,7 @@ def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
     # not_cluster_product: same except counting number of cells not in cluster
     # expressing both
     cluster_list = cells.iloc[:, 0]
-    exp = pd.DataFrame()
-    for gene in cells.columns[3:]:
-        exp[gene] = (
-            cells[gene] > (
-                singleton[
-                    singleton['gene'] == gene
-                ]['mHG_cutoff_value'].iloc[0]
-            )
-        ).astype(int)
-
+    exp = get_discrete_exp(cells, singleton)
     cluster_exp = exp[cluster_list == cluster]
     not_cluster_exp = exp[cluster_list != cluster]
     total_num = exp.shape[0]
@@ -284,10 +296,7 @@ def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
         )
         # start gene_B iterating from index i+1 to prevent duplicate pairs
         for gene_B in gene_list[i+1:]:
-            # don't pair genes with their complement
-            if gene_B is gene_A+"_c" or gene_A is gene_B+"_c":
-                continue
-
+            # For middle expression: pair gene with complement
             num_exp_in_cluster = cluster_product.loc[gene_A, gene_B]
             num_expressed = (
                 num_exp_in_cluster +
@@ -349,16 +358,7 @@ def find_TP_TN(cells, singleton, pair, cluster):
 
     # TODO: column operations for efficiency
     # TODO: stop code reuse
-    exp = pd.DataFrame()
-    for gene in cells.columns[3:]:
-        exp[gene] = (
-            cells[gene] > (
-                singleton[
-                    singleton['gene'] == gene
-                ]['mHG_cutoff_value'].iloc[0]
-            )
-        ).astype(int)
-
+    exp = get_discrete_exp(cells, singleton)
     cluster_list = cells.iloc[:, 0]
     cluster_exp = exp[cluster_list == cluster]
     not_cluster_not_exp = 1 - exp[cluster_list != cluster]
@@ -376,7 +376,7 @@ def find_TP_TN(cells, singleton, pair, cluster):
             true_positives = cluster_exp[
                 cluster_exp[gene_B] == 1
             ][gene].sum()
-            positives = true_positives = exp[
+            positives = exp[
                 exp[gene_B] == 1
             ][gene].sum()
             true_negatives = not_cluster_not_exp[
@@ -404,9 +404,9 @@ def find_TP_TN(cells, singleton, pair, cluster):
         )
         TP_TN = TP_TN.append(row_df, sort=False, ignore_index=True)
 
-    pair = pair.merge(TP_TN)
+    pair = pair.merge(TP_TN, how='left')
     # index is pair index; fix this for singleton
-    singleton = singleton.merge(TP_TN_singleton)
+    singleton = singleton.merge(TP_TN_singleton, how='left')
     return singleton, pair
 
 
@@ -437,18 +437,7 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
         ValueError: cells, singleton, or pair is in an incorrect format,
             plot_pages is less than 1.
     """
-
-    # TODO: stop code reuse
-    exp = pd.DataFrame()
-    for gene in cells.columns[3:]:
-        exp[gene] = (
-            cells[gene] > (
-                singleton[
-                    singleton['gene'] == gene
-                ]['mHG_cutoff_value'].iloc[0]
-            )
-        ).astype(int)
-
+    exp = get_discrete_exp(cells, singleton)
     with PdfPages(path) as pdf:
         for i in range(0, plot_pages):
             print("Plotting discrete plot "+str(i+1)+" of "+str(plot_pages))
@@ -547,17 +536,7 @@ def make_combined_plots(
             plot_pages is less than 1.
     """
 
-    # TODO: stop code reuse
-    exp = pd.DataFrame()
-    for gene in cells.columns[3:]:
-        exp[gene] = (
-            cells[gene] > (
-                singleton[
-                    singleton['gene'] == gene
-                ]['mHG_cutoff_value'].iloc[0]
-            )
-        ).astype(int)
-
+    exp = get_discrete_exp(cells, singleton)
     with PdfPages(pair_path) as pdf:
         for i in range(0, plot_pages):
             print("Plotting combination plot "+str(i+1)+" of "+str(plot_pages))
@@ -565,6 +544,9 @@ def make_combined_plots(
             gene_A = pair['gene'].iloc[i]
             gene_B = pair['gene_B'].iloc[i]
 
+            # Plot regular gene instead of complement.
+            # This is unnecessary and counterproductive.
+            """
             pattern = re.compile(r"^(.*)_c+$")
             search_A = re.search(pattern, gene_A)
             if search_A:
@@ -573,6 +555,7 @@ def make_combined_plots(
                     search_B = re.search(pattern, gene_B)
                     if search_B:
                         gene_B = search_B.group(1)
+            """
 
             # Graphs twogene and singlegene differently.
             if not pd.isnull(gene_B):
@@ -683,10 +666,14 @@ def make_combined_plots(
             # plot the cutoff
             gene = singleton['gene'].iloc[i]
 
+            # Plot regular gene instead of complement.
+            # This is unnecessary and counterproductive.
+            """
             pattern = re.compile(r"^(.*)_c+$")
             search = re.search(pattern, gene)
             if search:
                 gene = search.group(1)
+            """
 
             fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(10, 5))
 
