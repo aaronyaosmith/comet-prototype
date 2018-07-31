@@ -8,7 +8,6 @@ Cython==0.28.4
 decorator==4.3.0
 Flask==1.0.2
 future==0.16.0
--e git+https://github.com/aaronyaosmith/HG_marker_detection.git@36f0d53f57f1e8d4bb69f5f08a57107555edb09c#egg=hgmd
 idna==2.7
 ipython-genutils==0.2.0
 itsdangerous==0.24

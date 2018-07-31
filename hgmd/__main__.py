@@ -17,6 +17,7 @@ def main():
     visualizations.
     """
     # TODO: more precise description
+    # TODO: get X and L as CLI args
 
     # TODO: get command line input instead of assigning directly
     parser = argparse.ArgumentParser(
@@ -41,8 +42,6 @@ def main():
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
-    X = 3
-    L = 8000
     min_exp_ratio = 0.4
     plot_pages = 10
     plot_genes = 10
@@ -64,7 +63,7 @@ def main():
         cluster_path = output_path + "/cluster_" + str(cluster) + "/"
         os.makedirs(cluster_path, exist_ok=True)
         print("Testing singletons...")
-        singleton_data = md.singleton_test(cell_data, cluster, X, L)
+        singleton_data = md.singleton_test(cell_data, cluster)
         print("Testing pairs...")
         pair_data = md.pair_test(
             cell_data, singleton_data, cluster, min_exp_ratio

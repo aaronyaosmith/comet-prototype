@@ -9,6 +9,19 @@ from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
 
 
+def fuzzy_rank(series):
+    """Ranks a series of floats with 1e-6 relative fuzziness."""
+    def round_to_6(input_value):
+        """Rounds a value to 6 significant figures."""
+
+        from decimal import ROUND_HALF_EVEN, Context
+        ctx = Context(prec=6, rounding=ROUND_HALF_EVEN)
+        return float(ctx.create_decimal(input_value))
+
+    series = series.apply(round_to_6)
+    return series.rank()
+
+
 # TODO: Raise some exceptions!
 def get_cell_data(marker_path, tsne_path, cluster_path):
     """Parses cell data into a DataFrame.
@@ -75,7 +88,7 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
     return cell_data
 
 
-def singleton_test(cells, cluster, X, L):
+def singleton_test(cells, cluster):
     """Tests and ranks genes and complements using the XL-mHG test and t-test.
 
 
@@ -94,9 +107,11 @@ def singleton_test(cells, cluster, X, L):
             cluster identifier, then tSNE_1 and tSNE_2, then gene names.
         cluster: The cluster of interest. Must be in cells['cluster'].values.
         X: A parameter of the XL-mHG test. An integer specifying the minimum
-            number of cells in-cluster that should express the gene.
+            number of cells in-cluster that should express the gene. Defaults
+            to 15% of the cell count.
         L: A parameter of the XL-mHG test. An integer specifying the maximum
-            number of cells that should express the gene.
+            number of cells that should express the gene. Defaults to 85% of
+            the cell count.
 
     Returns:
         A single pandas DataFrame incorporating test and rank data, sorted
@@ -126,6 +141,7 @@ def singleton_test(cells, cluster, X, L):
         cells['cluster'].values, X is greater than the cluster size or less
         than 0, or L is less than X or greater than the population size.
     """
+    # TODO: add X and L
 
     output = pd.DataFrame(columns=[
         'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index', 'mHG_cutoff_value',
@@ -146,7 +162,7 @@ def singleton_test(cells, cluster, X, L):
         exp = cells[['cluster', gene]]
         exp = exp.sort_values(by=gene, ascending=False)
         v = np.array((exp['cluster'] == cluster).tolist()).astype(int)
-        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v, X=X, L=L)
+        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v, X=0)
         mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
         # "Slide up" the cutoff index to where the gene expression actually
         # changes. I.e. for array [5.3 1.2 0 0 0 0], if index == 4, the cutoff
@@ -171,11 +187,20 @@ def singleton_test(cells, cluster, X, L):
         )
         output = output.append(gene_data, sort=False, ignore_index=True)
 
-    HG_rank = output['mHG_pval'].rank()
-    t_rank = output['t_pval'].rank()
-    combined_rank = pd.DataFrame({'rank': HG_rank + t_rank})
+    # Pandas doesn't play nice with floating point fuzziness. Use fuzzy_rank to
+    # deal with this.
+    HG_rank = fuzzy_rank(output['HG_stat'])
+    t_rank = fuzzy_rank(output['t_pval'])
+    combined_rank = pd.DataFrame({
+        'rank': HG_rank + t_rank,
+        'HG_rank': HG_rank,
+        't_rank': t_rank
+    })
     output = output.join(combined_rank)
-    output = output.sort_values(by='rank', ascending=True)
+    # Genes with the same rank will be sorted by HG statistic.
+    # Mergesort is stable.
+    output = output.sort_values(by='HG_rank', ascending=True)
+    output = output.sort_values(by='rank', ascending=True, kind='mergesort')
     return output
 
 
@@ -286,7 +311,11 @@ def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
             output = output.append(gene_df, sort=False, ignore_index=True)
 
     output = singleton.append(output, sort=False, ignore_index=True)
-    output = output.sort_values(by='HG_stat', ascending=True)
+    # rerank by HG statistic and sort by HG only
+    # fuzzy_rank to avoid pandas issues with fuzziness
+    HG_rank = fuzzy_rank(output['HG_stat'])
+    output['HG_rank'] = HG_rank
+    output = output.sort_values(by='HG_rank', ascending=True)
     # put gene_B in the 2nd place
     output = output[['gene'] + ['gene_B'] + output.columns.tolist()[1:-1]]
     return output
@@ -364,7 +393,7 @@ def find_TP_TN(cells, singleton, pair, cluster):
                 }, index=[0]
             )
             TP_TN_singleton = TP_TN_singleton.append(
-                row_df_singleton, sort=False, ignore_index=False
+                row_df_singleton, sort=False, ignore_index=True
             )
 
         row_df = pd.DataFrame(
@@ -375,8 +404,9 @@ def find_TP_TN(cells, singleton, pair, cluster):
         )
         TP_TN = TP_TN.append(row_df, sort=False, ignore_index=True)
 
-    pair = pair.merge(TP_TN, how='outer')
-    singleton = singleton.merge(TP_TN_singleton, how='outer')
+    pair = pair.merge(TP_TN)
+    # index is pair index; fix this for singleton
+    singleton = singleton.merge(TP_TN_singleton)
     return singleton, pair
 
 
