@@ -43,9 +43,8 @@ def get_discrete_exp(cells, singleton):
     return exp
 
 
-# TODO: Raise some exceptions!
 def get_cell_data(marker_path, tsne_path, cluster_path):
-    """Parses cell data into a DataFrame.
+    """Parses cell data into a DataFrame, raising exceptions as necessary.
 
 
     Combines data at given paths into a single DataFrame. Assumes standard csv
@@ -64,34 +63,14 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
         names, in the order given by the file at tsne_path.
 
     Raises:
-        IOError: An error occurred accessing the files at marker_path,
+        OSError: An error occurred accessing the files at marker_path,
             tsne_path, and cluster_path.
         ValueError: The files at marker_path, tsne_path, and cluster_path have
             inappropriate formatting.
+        ValueError: The data contained in the files at marker_path, etc. is
+            invalid.
     """
 
-    """
-    # TODO: make this not have to fiddle so much with the CSV; the CSV should
-    # already be in a nice format
-    cell_data = pd.read_csv(marker_path, sep=' ')
-    cell_data = cell_data.T
-    cluster_data = pd.read_csv(
-        cluster_path, engine='python', sep='\s+', header=None, index_col=0
-    )
-    # TODO: are these assignments necessary?
-    cluster_data = cluster_data.rename(index=str, columns={1: "cluster"})
-    tsne_data = pd.read_csv(
-        tsne_path, engine='python', sep='\s+', header=None, index_col=0
-    )
-    tsne_data = tsne_data.rename(index=str, columns={1: "tSNE_1", 2: "tSNE_2"})
-    cell_data = pd.concat(
-        [cluster_data, tsne_data, cell_data], axis=1, sort=True
-    )
-    return cell_data
-    """
-
-    # Simple data reading; assumes neat CSV format with comma delimiter. See
-    # output of data_gen for details
     cell_data = pd.read_csv(marker_path, index_col=0)
     cluster_data = pd.read_csv(cluster_path, header=None, index_col=0)
     # TODO: are these assignments necessary?

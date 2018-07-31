@@ -21,7 +21,7 @@ check for exceptions (yet!). Does not check for PDF correctness (yet!!).
 import pandas as pd
 import pytest
 
-from hgmd import hgmd as hg
+from hgmd import hgmd as md
 
 
 # TEST_DATA_FILE contains cluster, tSNE 1/2, and known gene data
@@ -92,7 +92,7 @@ class TestTypical:
         return expected
 
     def test_get_cell_data(self, csv_read_data):
-        func_data = hg.get_cell_data(
+        func_data = md.get_cell_data(
             marker_path=MARKER_FILE,
             tsne_path=TSNE_FILE,
             cluster_path=CLUSTER_FILE
@@ -101,7 +101,7 @@ class TestTypical:
 
     def test_singleton_test(self, csv_read_data):
         for cluster in csv_read_data['cluster'].unique():
-            func_data = hg.singleton_test(csv_read_data, cluster)
+            func_data = md.singleton_test(csv_read_data, cluster)
             func_data = func_data.reset_index(drop=True)
             expected = self.singleton_data(cluster)
             func_data.to_csv(
@@ -113,7 +113,7 @@ class TestTypical:
     def test_pair_test(self, csv_read_data):
         for cluster in csv_read_data['cluster'].unique():
             singleton = self.singleton_data(cluster)
-            func_data = hg.pair_test(csv_read_data, singleton, cluster)
+            func_data = md.pair_test(csv_read_data, singleton, cluster)
             func_data = func_data.reset_index(drop=True)
             expected = self.pair_data(cluster)
             func_data.to_csv(
@@ -125,7 +125,7 @@ class TestTypical:
         for cluster in csv_read_data['cluster'].unique():
             singleton = self.singleton_data(cluster)
             pair = self.pair_data(cluster)
-            singleton, pair = hg.find_TP_TN(
+            singleton, pair = md.find_TP_TN(
                 csv_read_data, singleton, pair, cluster
             )
             singleton_expected = self.TP_TN_singleton_data(cluster)
