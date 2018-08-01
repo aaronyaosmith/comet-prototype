@@ -56,6 +56,10 @@ def main():
     plot_pages = 60
     plot_genes = 30
 
+    if X is not None:
+        print("Set X to " + str(X) + ".")
+    if L is not None:
+        print("Set L to " + str(L) + ".")
     print("Reading data...")
     cell_data = md.get_cell_data(
         marker_path=(input_path + marker_file),

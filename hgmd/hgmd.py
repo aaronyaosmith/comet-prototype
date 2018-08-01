@@ -175,6 +175,12 @@ def singleton_test(cells, cluster, X=None, L=None):
         mHG_cutoff_index = np.searchsorted(
             -exp[gene].values, -mHG_cutoff_value, side='left'
         )
+        # If index is 0 (all cells selected), slide to next value)
+        if np.isclose(mHG_cutoff_index, 0):
+            mHG_cutoff_index = np.searchsorted(
+                -exp[gene].values, -mHG_cutoff_value, side='right'
+            )
+            mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
         # TODO: reassigning sample and population every time is inefficient
         sample = exp[exp['cluster'] == cluster]
         population = exp[exp['cluster'] != cluster]
@@ -342,6 +348,7 @@ def find_TP_TN(cells, singleton, pair, cluster):
     # TODO: stop code reuse
     exp = get_discrete_exp(cells, singleton)
     cluster_list = cells.iloc[:, 0]
+    cluster_size = cluster_list[cluster_list == cluster].sum()
     cluster_exp = exp[cluster_list == cluster]
     not_cluster_not_exp = 1 - exp[cluster_list != cluster]
     TP_TN = pd.DataFrame()
@@ -351,18 +358,16 @@ def find_TP_TN(cells, singleton, pair, cluster):
         gene_B = row['gene_B']
         if pd.isnull(gene_B):
             true_positives = cluster_exp[gene].sum()
-            positives = exp[gene].sum()
+            positives = cluster_size
             true_negatives = not_cluster_not_exp[gene].sum()
             negatives = cells.shape[0] - positives
         elif pd.notnull(gene_B):
             true_positives = cluster_exp[
                 cluster_exp[gene_B] == 1
             ][gene].sum()
-            positives = exp[
-                exp[gene_B] == 1
-            ][gene].sum()
+            positives = cluster_size
             true_negatives = not_cluster_not_exp[
-                not_cluster_not_exp[gene_B] == 1
+                not_cluster_not_exp[gene_B] == 0
             ][gene].sum()
             negatives = cells.shape[0] - positives
         TP_rate = true_positives / float(positives)
