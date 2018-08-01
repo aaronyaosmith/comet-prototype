@@ -52,13 +52,14 @@ def test_invalid_path():
             marker_path, tsne_path, cluster_path
         )
     assert 'DUMMY/' in str(excinfo.value)
-    with pytest.raises(OSError):
+    with pytest.raises(ValueError) as excinfo:
         marker_path = INPUT_FOLDER + 'markers.txt'
         tsne_path = INPUT_FOLDER + 'tsne.txt'
         cluster_path = 0
         md.get_cell_data(
             marker_path, tsne_path, cluster_path
         )
+    assert 'int' in str(excinfo.value)
 
 
 def test_invalid_format():
@@ -93,6 +94,16 @@ def test_invalid_format():
             marker_path, tsne_path, cluster_path
         )
     assert 'missing column' in str(excinfo.value)
+    # TODO: validate nonsense: corrupt file, messed up header, etc.
+    """
+    with pytest.raises(ValueError) as excinfo:
+        marker_path = INPUT_FOLDER + 'NONSENSE.txt'
+        tsne_path = INPUT_FOLDER + 'tsne.txt'
+        cluster_path = INPUT_FOLDER + 'cluster_missing_column.txt'
+        md.get_cell_data(
+            marker_path, tsne_path, cluster_path
+        )
+    """
 
 
 def test_invalid_data():

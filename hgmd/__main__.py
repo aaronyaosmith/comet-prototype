@@ -33,18 +33,28 @@ def main():
         'output_path', type=str,
         help="the output directory where output files should go"
     )
+    parser.add_argument(
+        '-X', nargs='?', default=None,
+        help="X argument for XL-mHG"
+    )
+    parser.add_argument(
+        '-L', nargs='?', default=None,
+        help="L argument for XL-mHG"
+    )
     args = parser.parse_args()
 
     input_path = args.input_path
     output_path = args.output_path
+    X = int(args.X)
+    L = int(args.L)
     # input_path = '/home/aaron/Documents/hgmd/data/input/'
     # output_path = '/home/aaron/Documents/hgmd/data/output/'
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
     min_exp_ratio = 0.4
-    plot_pages = 10
-    plot_genes = 10
+    plot_pages = 60
+    plot_genes = 30
 
     print("Reading data...")
     cell_data = md.get_cell_data(
@@ -63,7 +73,7 @@ def main():
         cluster_path = output_path + "/cluster_" + str(cluster) + "/"
         os.makedirs(cluster_path, exist_ok=True)
         print("Testing singletons...")
-        singleton_data = md.singleton_test(cell_data, cluster)
+        singleton_data = md.singleton_test(cell_data, cluster, X, L)
         print("Testing pairs...")
         pair_data = md.pair_test(
             cell_data, singleton_data, cluster, min_exp_ratio

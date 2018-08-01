@@ -88,7 +88,7 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
     return cell_data
 
 
-def singleton_test(cells, cluster):
+def singleton_test(cells, cluster, X=None, L=None):
     """Tests and ranks genes and complements using the XL-mHG test and t-test.
 
 
@@ -141,7 +141,6 @@ def singleton_test(cells, cluster):
         cells['cluster'].values, X is greater than the cluster size or less
         than 0, or L is less than X or greater than the population size.
     """
-    # TODO: add X and L
 
     output = pd.DataFrame(columns=[
         'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index', 'mHG_cutoff_value',
@@ -162,7 +161,11 @@ def singleton_test(cells, cluster):
         exp = cells[['cluster', gene]]
         exp = exp.sort_values(by=gene, ascending=False)
         v = np.array((exp['cluster'] == cluster).tolist()).astype(int)
-        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v)
+        if X is None:
+            X = 1
+        if L is None:
+            L = cells.shape[0]
+        HG_stat, mHG_cutoff_index, mHG_pval = hg.xlmhg_test(v, X=X, L=L)
         mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
         # "Slide up" the cutoff index to where the gene expression actually
         # changes. I.e. for array [5.3 1.2 0 0 0 0], if index == 4, the cutoff
