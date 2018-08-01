@@ -101,7 +101,7 @@ def main():
         print("Done.")
         print("Plotting continuous expresssion...")
         md.make_combined_plots(
-            cell_data, singleton_data, pair_data, plot_genes,
+            cell_data, singleton_data, pair_data, plot_pages,
             pair_path=(cluster_path + "combined_plot.pdf"),
             singleton_path=(cluster_path + "singleton_combined_plot.pdf")
         )
