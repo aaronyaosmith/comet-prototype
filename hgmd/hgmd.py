@@ -213,7 +213,7 @@ def singleton_test(cells, cluster, X=None, L=None):
     return output
 
 
-def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
+def pair_test(cells, singleton, cluster, L=None, min_exp_ratio=0.4):
     """Tests and ranks pairs of genes using the hypergeometric test.
 
 
@@ -253,6 +253,8 @@ def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
     # of cells in cluster expressing both
     # not_cluster_product: same except counting number of cells not in cluster
     # expressing both
+    if L is None:
+        L = cells.shape[0]
     cluster_list = cells.iloc[:, 0]
     exp = get_discrete_exp(cells, singleton)
     cluster_exp = exp[cluster_list == cluster]
@@ -260,9 +262,15 @@ def pair_test(cells, singleton, cluster, min_exp_ratio=0.4):
     total_num = exp.shape[0]
     cluster_size = cluster_exp.shape[0]
     # DROP COLUMNS WITH cluster expression below threshold FROM ONLY MULTI DFs
+    # ALSO DROP COLUMNS with index>L
     dropped_genes = list([])
     for gene in cluster_exp.columns:
         if cluster_exp[gene].sum() / float(cluster_size) < min_exp_ratio:
+            dropped_genes.append(gene)
+        elif (
+            singleton[singleton['gene'] == gene]['mHG_cutoff_index'].iloc[0]
+            > L
+        ):
             dropped_genes.append(gene)
 
     gene_list = np.setdiff1d(cluster_exp.columns.values, dropped_genes)

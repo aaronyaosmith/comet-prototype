@@ -80,7 +80,7 @@ def main():
         singleton_data = md.singleton_test(cell_data, cluster, X, L)
         print("Testing pairs...")
         pair_data = md.pair_test(
-            cell_data, singleton_data, cluster, min_exp_ratio
+            cell_data, singleton_data, cluster, L, min_exp_ratio
         )
         print("Calculating true positive/negative rates...")
         singleton_data, pair_data = md.find_TP_TN(
