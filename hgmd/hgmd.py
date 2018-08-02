@@ -347,13 +347,17 @@ def find_TP_TN(cells, singleton, pair, cluster):
     # TODO: column operations for efficiency
     # TODO: stop code reuse
     exp = get_discrete_exp(cells, singleton)
-    cluster_list = cells.iloc[:, 0]
-    cluster_size = cluster_list[cluster_list == cluster].sum()
+    cluster_list = cells['cluster']
+    cluster_size = cluster_list[cluster_list == cluster].size
     cluster_exp = exp[cluster_list == cluster]
     not_cluster_not_exp = 1 - exp[cluster_list != cluster]
     TP_TN = pd.DataFrame()
     TP_TN_singleton = pd.DataFrame()
+    i = 0
     for index, row in pair.iterrows():
+        i += 1
+        if i % 500 == 0:
+            print(str(i) + " of " + str(pair.shape[0]))
         gene = row['gene']
         gene_B = row['gene_B']
         if pd.isnull(gene_B):
@@ -367,8 +371,8 @@ def find_TP_TN(cells, singleton, pair, cluster):
             ][gene].sum()
             positives = cluster_size
             true_negatives = not_cluster_not_exp[
-                not_cluster_not_exp[gene_B] == 0
-            ][gene].sum()
+                not_cluster_not_exp[gene] + not_cluster_not_exp[gene_B] > 0
+            ].shape[0]
             negatives = cells.shape[0] - positives
         TP_rate = true_positives / float(positives)
         TN_rate = true_negatives / float(negatives)
