@@ -509,10 +509,11 @@ def find_weighted_TP_TN(cells, singleton, pair, cluster):
     pair_weight = pair_weight.rename(
         index=str,
         columns={
+            'gene_x': 'gene',
             'weight_1': 'gene_B_weight_1',
             'weight_2': 'gene_B_weight_2'
         }
-    )
+    ).drop(columns='gene_y')
     pair_weight['weight_1'] = (
         (pair_weight['gene_weight_1'] + pair_weight['gene_B_weight_1'])
         / 2
