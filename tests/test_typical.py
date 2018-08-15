@@ -14,6 +14,9 @@ Generates a "typical"-looking dataset with following specifications:
     - 6 genes with random values
 Verifies that all functions in hgmd.py return what they should return. Does not
 check for exceptions (yet!). Does not check for PDF correctness (yet!!).
+
+The OUTPUT_FOLDER stores "correct" output to be checked
+against. TEST_OUTPUT_FOLDER stores the output of the test runs.
 """
 # TODO: test fringe cases: weird data, exception-raising (update docstring!).
 # TODO: PDFs (also update docstring!).
@@ -56,9 +59,11 @@ class TestTypical:
             + '/singleton_data.csv'
         )
         expected = pd.read_csv(path, index_col=0).rename_axis(None)
-        expected = expected.drop(
-            columns=['true_positive', 'true_negative']
-        )
+        expected = expected[[
+            'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
+            'mHG_cutoff_value',
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank'
+        ]]
         return expected
 
     @staticmethod
@@ -68,9 +73,11 @@ class TestTypical:
             + '/pair_data.csv'
         )
         expected = pd.read_csv(path, index_col=0).rename_axis(None)
-        expected = expected.drop(
-            columns=['true_positive', 'true_negative']
-        )
+        expected = expected[[
+            'gene', 'gene_B', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
+            'mHG_cutoff_value',
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank'
+        ]]
         return expected
 
     @staticmethod
@@ -80,10 +87,40 @@ class TestTypical:
             + '/singleton_data.csv'
         )
         expected = pd.read_csv(path, index_col=0).rename_axis(None)
+        expected = expected[[
+            'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
+            'mHG_cutoff_value',
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'true_negative', 'true_positive'
+        ]]
         return expected
 
     @staticmethod
     def TP_TN_data(cluster):
+        path = (
+            OUTPUT_FOLDER + 'cluster_' + str(cluster)
+            + '/pair_data.csv'
+        )
+        expected = pd.read_csv(path, index_col=0).rename_axis(None)
+        expected = expected[[
+            'gene', 'gene_B', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
+            'mHG_cutoff_value',
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'true_negative', 'true_positive'
+        ]]
+        return expected
+
+    @staticmethod
+    def TP_TN_weighted_singleton_data(cluster):
+        path = (
+            OUTPUT_FOLDER + 'cluster_' + str(cluster)
+            + '/singleton_data.csv'
+        )
+        expected = pd.read_csv(path, index_col=0).rename_axis(None)
+        return expected
+
+    @staticmethod
+    def TP_TN_weighted_data(cluster):
         path = (
             OUTPUT_FOLDER + 'cluster_' + str(cluster)
             + '/pair_data.csv'
@@ -137,6 +174,26 @@ class TestTypical:
             pair.to_csv(
                 TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
                 + '_TP_TN_pair.csv'
+            )
+            assert_frame_equal(singleton_expected, singleton)
+            assert_frame_equal(pair_expected, pair)
+
+    def test_find_weighted_TP_TN(self, csv_read_data):
+        for cluster in csv_read_data['cluster'].unique():
+            singleton = self.TP_TN_weighted_singleton_data(cluster)
+            pair = self.TP_TN_weighted_data(cluster)
+            singleton, pair = md.find_TP_TN(
+                csv_read_data, singleton, pair, cluster
+            )
+            singleton_expected = self.TP_TN_weighted_singleton_data(cluster)
+            pair_expected = self.TP_TN_weighted_data(cluster)
+            singleton.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
+                + '_TP_TN_weighted_singleton.csv'
+            )
+            pair.to_csv(
+                TEST_OUTPUT_FOLDER + 'cluster_' + str(cluster)
+                + '_TP_TN_weighted_pair.csv'
             )
             assert_frame_equal(singleton_expected, singleton)
             assert_frame_equal(pair_expected, pair)

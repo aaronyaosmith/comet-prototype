@@ -45,20 +45,22 @@ def main():
 
     input_path = args.input_path
     output_path = args.output_path
-    X = int(args.X)
-    L = int(args.L)
+    X = args.X
+    L = args.L
     # input_path = '/home/aaron/Documents/hgmd/data/input/'
     # output_path = '/home/aaron/Documents/hgmd/data/output/'
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
     min_exp_ratio = 0.4
-    plot_pages = 60
-    plot_genes = 30
+    plot_pages = 15
+    plot_genes = 15
 
     if X is not None:
+        X = int(X)
         print("Set X to " + str(X) + ".")
     if L is not None:
+        L = int(L)
         print("Set L to " + str(L) + ".")
     print("Reading data...")
     cell_data = md.get_cell_data(
@@ -84,6 +86,10 @@ def main():
         )
         print("Calculating true positive/negative rates...")
         singleton_data, pair_data = md.find_TP_TN(
+            cell_data, singleton_data, pair_data, cluster
+        )
+        print("Calculating weighted TP/TN rates...")
+        singleton_data, pair_data = md.find_weighted_TP_TN(
             cell_data, singleton_data, pair_data, cluster
         )
         print("Saving to CSV...")

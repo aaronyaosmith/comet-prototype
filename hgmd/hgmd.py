@@ -180,7 +180,14 @@ def singleton_test(cells, cluster, X=None, L=None):
             mHG_cutoff_index = np.searchsorted(
                 -exp[gene].values, -mHG_cutoff_value, side='right'
             )
-            mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
+            if mHG_cutoff_index == exp.shape[0]:
+                print(
+                    "WARNING: "
+                    + gene
+                    + " has uniform expression across the population!"
+                )
+            else:
+                mHG_cutoff_value = exp.iloc[mHG_cutoff_index][gene]
         # TODO: reassigning sample and population every time is inefficient
         sample = exp[exp['cluster'] == cluster]
         population = exp[exp['cluster'] != cluster]
@@ -406,6 +413,136 @@ def find_TP_TN(cells, singleton, pair, cluster):
     pair = pair.merge(TP_TN, how='left')
     # index is pair index; fix this for singleton
     singleton = singleton.merge(TP_TN_singleton, how='left')
+    return singleton, pair
+
+
+def find_weighted_TP_TN(cells, singleton, pair, cluster):
+    """Finds TP/TN rates weighted by gene quality.
+
+
+    Uses output of singleton_test and pair_test to find weighted TP/TN rates
+    for gene expression weighted by gene quality. Gene quality is defined as
+    the number of cells which have nonzero expression. Two methods are
+    used. First, the gene list is split into 3 buckets by quality, and their
+    TP/TN are weighted by fixed coefficients (i.e. 1, 2, 3). Second, the gene
+    list is split into 6 buckets and their TP/TN are weighted by median quality
+    of the bucket.
+
+    Args:
+        cells: A DataFrame with format matching those returned by
+            get_cell_data. Row values are cell identifiers, columns are first
+            cluster identifier, then tSNE_1 and tSNE_2, then gene names, then
+            true positive and true negative, unweighted.
+        singleton: A DataFrame with format matching those returned by
+            singleton_test.
+        pair: A DataFrame with format matching those returned by pair_test.
+        cluster: The cluster of interest. Must be in cells['cluster'].values.
+
+    Returns:
+        singleton and pair with columns 'weighted_TP_1', 'weighted_TN_1',
+        'weight_1', 'weighted_TP_2', 'weighted_TN_2', 'weight_2', 'quality'.
+
+    Raises:
+        ValueError: cells, singleton, or pair is in an incorrect format, or
+            cluster is not in cells['cluster'].values.
+    """
+
+    QUANTILES_METHOD_1 = 3
+    QUANTILES_METHOD_2 = 6
+    quality = (cells.astype(bool).sum(axis=0) /
+               cells.shape[0]).rename('quality')
+    singleton = singleton.join(quality, on='gene', sort=False)
+    singleton['weight_1'] = (
+        (
+            pd.qcut(
+                singleton['quality'], QUANTILES_METHOD_1,
+                labels=False, duplicates='drop'
+            ) + 1
+        ) / QUANTILES_METHOD_1
+    )
+    singleton['quantile'] = (
+        pd.qcut(
+            singleton['quality'], QUANTILES_METHOD_2,
+            labels=False, duplicates='drop'
+        ) + 1
+    )
+    singleton['weight_2'] = (
+        singleton[
+            ['quality', 'quantile']
+        ].groupby('quantile').transform('median')
+    )
+    singleton['weighted_TP_1'] = (
+        singleton['true_positive'] * singleton['weight_1']
+    )
+    singleton['weighted_TN_1'] = (
+        singleton['true_negative'] * singleton['weight_1']
+    )
+    singleton['weighted_TP_2'] = (
+        singleton['true_positive'] * singleton['weight_2']
+    )
+    singleton['weighted_TN_2'] = (
+        singleton['true_negative'] * singleton['weight_2']
+    )
+
+    # get pair weights by averaging weights of individuals
+    pair_only = pair[pair['gene_B'].notnull()]
+    pair_weight = pair_only[['gene', 'gene_B']]
+    pair_weight = pair_weight.merge(
+        singleton[['gene', 'weight_1', 'weight_2']],
+        left_on='gene',
+        right_on='gene',
+        how='left'
+    )
+    pair_weight = pair_weight.rename(
+        index=str,
+        columns={
+            'weight_1': 'gene_weight_1',
+            'weight_2': 'gene_weight_2'
+        }
+    )
+    pair_weight = pair_weight.merge(
+        singleton[['gene', 'weight_1', 'weight_2']],
+        left_on='gene_B',
+        right_on='gene',
+        how='left'
+    )
+    pair_weight = pair_weight.rename(
+        index=str,
+        columns={
+            'weight_1': 'gene_B_weight_1',
+            'weight_2': 'gene_B_weight_2'
+        }
+    )
+    pair_weight['weight_1'] = (
+        (pair_weight['gene_weight_1'] + pair_weight['gene_B_weight_1'])
+        / 2
+    )
+    pair_weight['weight_2'] = (
+        (pair_weight['gene_weight_2'] + pair_weight['gene_B_weight_2'])
+        / 2
+    )
+    pair_weight = pair_weight.append(
+        singleton[['gene', 'weight_1', 'weight_2']], ignore_index=True,
+        sort=False
+    )
+    pair = pair.merge(
+        pair_weight[['gene', 'gene_B', 'weight_1', 'weight_2']],
+        on=['gene', 'gene_B'],
+        how='left',
+        sort=False
+    )
+    pair['weighted_TP_1'] = (
+        pair['true_positive'] * pair['weight_1']
+    )
+    pair['weighted_TN_1'] = (
+        pair['true_negative'] * pair['weight_1']
+    )
+    pair['weighted_TP_2'] = (
+        pair['true_positive'] * pair['weight_2']
+    )
+    pair['weighted_TN_2'] = (
+        pair['true_negative'] * pair['weight_2']
+    )
     return singleton, pair
 
 
