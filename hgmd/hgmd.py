@@ -620,9 +620,9 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
                 ax2.set_ylabel("tSNE_2")
                 ax2.set_title(
                     gene_A + " %.3f" %
-                    pair[
+                    np.absolute(pair[
                         (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
-                    ]['mHG_cutoff_value'].iloc[0]
+                    ]['mHG_cutoff_value'].iloc[0])
                 )
                 # plt.colorbar(sc2, ax=ax2)
 
@@ -637,9 +637,9 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
                 ax3.set_ylabel("tSNE_2")
                 ax3.set_title(
                     gene_B + " %.3f" %
-                    pair[
+                    np.absolute(pair[
                         (pair['gene'] == gene_B) & (pair['gene_B'].isnull())
-                    ]['mHG_cutoff_value'].iloc[0]
+                    ]['mHG_cutoff_value'].iloc[0])
                 )
                 # plt.colorbar(sc3, ax=ax3)
 
