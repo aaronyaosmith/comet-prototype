@@ -62,7 +62,8 @@ class TestTypical:
         expected = expected[[
             'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
             'mHG_cutoff_value',
-            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank'
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'sequential_rank'
         ]]
         return expected
 
@@ -76,7 +77,8 @@ class TestTypical:
         expected = expected[[
             'gene', 'gene_B', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
             'mHG_cutoff_value',
-            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank'
+            't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'sequential_rank'
         ]]
         return expected
 
@@ -91,6 +93,7 @@ class TestTypical:
             'gene', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
             'mHG_cutoff_value',
             't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'sequential_rank',
             'true_negative', 'true_positive'
         ]]
         return expected
@@ -106,6 +109,7 @@ class TestTypical:
             'gene', 'gene_B', 'HG_stat', 'mHG_pval', 'mHG_cutoff_index',
             'mHG_cutoff_value',
             't_stat', 't_pval', 'HG_rank', 'rank', 't_rank',
+            'sequential_rank',
             'true_negative', 'true_positive'
         ]]
         return expected

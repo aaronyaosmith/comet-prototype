@@ -135,6 +135,8 @@ def singleton_test(cells, cluster, X=None, L=None):
             'rank': The average of the gene's 'mHG_pval' rank and 't_pval'
                 rank. Lower p-value is higher rank. A rank of 1 ("first") is
                 higher than a rank of 2 ("second").
+            'sequential_rank': Like rank, but goes from 1 to number of genes
+                without repeats.
 
     Raises:
         ValueError: cells is in an incorrect format, cluster is not in
@@ -217,6 +219,7 @@ def singleton_test(cells, cluster, X=None, L=None):
     # Mergesort is stable.
     output = output.sort_values(by='HG_rank', ascending=True)
     output = output.sort_values(by='rank', ascending=True, kind='mergesort')
+    output['sequential_rank'] = output.reset_index().index + 1
     return output
 
 
@@ -330,6 +333,7 @@ def pair_test(cells, singleton, cluster, L=None, min_exp_ratio=0.4):
     output = output.sort_values(by='HG_rank', ascending=True)
     # put gene_B in the 2nd place
     output = output[['gene'] + ['gene_B'] + output.columns.tolist()[1:-1]]
+    output['sequential_rank'] = output.reset_index().index + 1
     return output
 
 
@@ -574,6 +578,7 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
         ValueError: cells, singleton, or pair is in an incorrect format,
             plot_pages is less than 1.
     """
+
     exp = get_discrete_exp(cells, singleton)
     with PdfPages(path) as pdf:
         for i in range(0, plot_pages):
@@ -601,7 +606,7 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
             )
             ax1.set_xlabel("tSNE_1")
             ax1.set_ylabel("tSNE_2")
-            plt.colorbar(sc1, ax=ax1)
+            # plt.colorbar(sc1, ax=ax1)
 
             if not pd.isnull(gene_B):
                 sc2 = ax2.scatter(
@@ -619,7 +624,7 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
                         (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
                     ]['mHG_cutoff_value'].iloc[0]
                 )
-                plt.colorbar(sc2, ax=ax2)
+                # plt.colorbar(sc2, ax=ax2)
 
                 sc3 = ax3.scatter(
                     x=cells['tSNE_1'],
@@ -636,7 +641,7 @@ def make_discrete_plots(cells, singleton, pair, plot_pages, path):
                         (pair['gene'] == gene_B) & (pair['gene_B'].isnull())
                     ]['mHG_cutoff_value'].iloc[0]
                 )
-                plt.colorbar(sc3, ax=ax3)
+                # plt.colorbar(sc3, ax=ax3)
 
             pdf.savefig(fig)
             plt.close(fig)
@@ -673,6 +678,8 @@ def make_combined_plots(
             plot_pages is less than 1.
     """
 
+    CMAP_CONTINUOUS = cm.get_cmap('nipy_spectral_r')
+    CMAP_DISCRETE = cm.get_cmap('bwr')
     exp = get_discrete_exp(cells, singleton)
     with PdfPages(pair_path) as pdf:
         for i in range(0, plot_pages):
@@ -705,24 +712,24 @@ def make_combined_plots(
                     y=cells['tSNE_2'],
                     s=3,
                     c=exp[gene_A],
-                    cmap=cm.get_cmap('bwr')
+                    cmap=CMAP_DISCRETE
                 )
                 ax1a.set_xlabel("tSNE_1")
                 ax1a.set_ylabel("tSNE_2")
                 ax1a.set_title(
                     gene_A + " %.3f" %
-                    pair[
+                    np.absolute(pair[
                         (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
-                    ]['mHG_cutoff_value'].iloc[0]
+                    ]['mHG_cutoff_value'].iloc[0])
                 )
-                plt.colorbar(sc1a, ax=ax1a)
+                # plt.colorbar(sc1a, ax=ax1a)
 
                 sc1b = ax1b.scatter(
                     x=cells['tSNE_1'],
                     y=cells['tSNE_2'],
                     s=3,
-                    c=cells[gene_A],
-                    cmap=cm.get_cmap('viridis')
+                    c=np.absolute(cells[gene_A]),
+                    cmap=CMAP_CONTINUOUS
                 )
                 ax1b.set_xlabel("tSNE_1")
                 ax1b.set_ylabel("tSNE_2")
@@ -734,24 +741,24 @@ def make_combined_plots(
                     y=cells['tSNE_2'],
                     s=3,
                     c=exp[gene_B],
-                    cmap=cm.get_cmap('bwr')
+                    cmap=CMAP_DISCRETE
                 )
                 ax2a.set_xlabel("tSNE_1")
                 ax2a.set_ylabel("tSNE_2")
                 ax2a.set_title(
                     gene_B + " %.3f" %
-                    pair[
+                    np.absolute(pair[
                         (pair['gene'] == gene_B) & (pair['gene_B'].isnull())
-                    ]['mHG_cutoff_value'].iloc[0]
+                    ]['mHG_cutoff_value'].iloc[0])
                 )
-                plt.colorbar(sc2a, ax=ax2a)
+                # plt.colorbar(sc2a, ax=ax2a)
 
                 sc2b = ax2b.scatter(
                     x=cells['tSNE_1'],
                     y=cells['tSNE_2'],
                     s=3,
-                    c=cells[gene_B],
-                    cmap=cm.get_cmap('viridis')
+                    c=np.absolute(cells[gene_B]),
+                    cmap=CMAP_CONTINUOUS
                 )
                 ax2b.set_xlabel("tSNE_1")
                 ax2b.set_ylabel("tSNE_2")
@@ -765,24 +772,24 @@ def make_combined_plots(
                     y=cells['tSNE_2'],
                     s=3,
                     c=exp[gene_A],
-                    cmap=cm.get_cmap('bwr')
+                    cmap=CMAP_DISCRETE
                 )
                 ax1.set_xlabel("tSNE_1")
                 ax1.set_ylabel("tSNE_2")
                 ax1.set_title(
                     gene_A + " %.3f" %
-                    pair[
+                    np.absolute(pair[
                         (pair['gene'] == gene_A) & (pair['gene_B'].isnull())
-                    ]['mHG_cutoff_value'].iloc[0]
+                    ]['mHG_cutoff_value'].iloc[0])
                 )
-                plt.colorbar(sc1, ax=ax1)
+                # plt.colorbar(sc1, ax=ax1)
 
                 sc2 = ax2.scatter(
                     x=cells['tSNE_1'],
                     y=cells['tSNE_2'],
                     s=3,
-                    c=cells[gene_A],
-                    cmap=cm.get_cmap('viridis')
+                    c=np.absolute(cells[gene_A]),
+                    cmap=CMAP_CONTINUOUS
                 )
                 ax2.set_xlabel("tSNE_1")
                 ax2.set_ylabel("tSNE_2")
@@ -819,24 +826,24 @@ def make_combined_plots(
                 y=cells['tSNE_2'],
                 s=3,
                 c=exp[gene],
-                cmap=cm.get_cmap('bwr')
+                cmap=CMAP_DISCRETE
             )
             ax1.set_xlabel("tSNE_1")
             ax1.set_ylabel("tSNE_2")
             ax1.set_title(
                 gene + " %.3f" %
-                singleton[
+                np.absolute(singleton[
                     singleton['gene'] == gene
-                ]['mHG_cutoff_value'].iloc[0]
+                ]['mHG_cutoff_value'].iloc[0])
             )
-            plt.colorbar(sc1, ax=ax1)
+            # plt.colorbar(sc1, ax=ax1)
 
             sc2 = ax2.scatter(
                 x=cells['tSNE_1'],
                 y=cells['tSNE_2'],
                 s=3,
-                c=cells[gene],
-                cmap=cm.get_cmap('viridis')
+                c=np.absolute(cells[gene]),
+                cmap=CMAP_CONTINUOUS
             )
             ax2.set_xlabel("tSNE_1")
             ax2.set_ylabel("tSNE_2")
@@ -880,12 +887,15 @@ def make_TP_TN_plots(
     plt.xlabel("True positive")
     plt.ylabel("True negative")
     plt.title("True positive/negative")
+    plt.axis([0.0, 1.0, 0.0, 1.0])
+    plt.scatter(pair.iloc[:20]['true_positive'],
+                pair.iloc[:20]['true_negative'])
 
     for i in range(0, 20):
         row = pair.iloc[i]
         if pd.isnull(row['gene_B']):
             plt.annotate(
-                row['gene'], (row['true_positive'], row['true_negative'])
+                row['gene'], (row['true_positive'], row['true_negative']),
             )
         else:
             plt.annotate(
@@ -900,6 +910,9 @@ def make_TP_TN_plots(
     plt.xlabel("True positive")
     plt.ylabel("True negative")
     plt.title("True positive/negative")
+    plt.axis([0.0, 1.0, 0.0, 1.0])
+    plt.scatter(singleton.iloc[:20]['true_positive'],
+                singleton.iloc[:20]['true_negative'])
 
     for i in range(0, 20):
         row = singleton.iloc[i]
