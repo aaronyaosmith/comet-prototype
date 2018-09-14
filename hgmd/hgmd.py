@@ -678,7 +678,7 @@ def make_combined_plots(
             plot_pages is less than 1.
     """
 
-    CMAP_CONTINUOUS = cm.get_cmap('nipy_spectral_r')
+    CMAP_CONTINUOUS = cm.get_cmap('nipy_spectral')
     CMAP_DISCRETE = cm.get_cmap('bwr')
     exp = get_discrete_exp(cells, singleton)
     with PdfPages(pair_path) as pdf:
@@ -883,24 +883,29 @@ def make_TP_TN_plots(
         ValueError: cells, singleton, or pair is in an incorrect format,
         plot_pages is less than 1.
     """
+    PADDING = 0.002
+
     fig = plt.figure(figsize=[15, 15])
     plt.xlabel("True positive")
     plt.ylabel("True negative")
     plt.title("True positive/negative")
     plt.axis([0.0, 1.0, 0.0, 1.0])
     plt.scatter(pair.iloc[:20]['true_positive'],
-                pair.iloc[:20]['true_negative'])
+                pair.iloc[:20]['true_negative'],
+                s=3)
 
     for i in range(0, 20):
         row = pair.iloc[i]
         if pd.isnull(row['gene_B']):
             plt.annotate(
-                row['gene'], (row['true_positive'], row['true_negative']),
+                row['gene'], (row['true_positive'] + PADDING,
+                              row['true_negative'] + PADDING),
             )
         else:
             plt.annotate(
                 row['gene'] + "+" + row['gene_B'],
-                (row['true_positive'], row['true_negative'])
+                (row['true_positive'] + PADDING,
+                 row['true_negative'] + PADDING)
             )
 
     fig.savefig(pair_path)
@@ -912,11 +917,13 @@ def make_TP_TN_plots(
     plt.title("True positive/negative")
     plt.axis([0.0, 1.0, 0.0, 1.0])
     plt.scatter(singleton.iloc[:20]['true_positive'],
-                singleton.iloc[:20]['true_negative'])
+                singleton.iloc[:20]['true_negative'],
+                s=3)
 
     for i in range(0, 20):
         row = singleton.iloc[i]
-        plt.annotate(row['gene'], (row['true_positive'], row['true_negative']))
+        plt.annotate(row['gene'], (row['true_positive'] +
+                                   PADDING, row['true_negative'] + PADDING))
 
     fig.savefig(singleton_path)
     plt.close(fig)
