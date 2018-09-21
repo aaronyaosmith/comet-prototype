@@ -40,9 +40,9 @@ def batch_xlmhg(marker_exp, c_list, coi, X=None, L=None):
     :param X: An integer to be used as argument to the XL-mHG test.
     :param L: An integer to be used as argument to the XL-mHG test.
 
-    :returns: A matrix whose row labels are gene identifiers, and whose columns
-              are the stat, cutoff, and pval outputs of the XL-mHG test; of
-              float, int, and float type respectively.  Their names are
+    :returns: A matrix with arbitrary row indices, whose columns are the gene
+              name, stat, cutoff, and pval outputs of the XL-mHG test; of
+              float, int, and float type respectively.  Their names are 'gene',
               'HG_stat', 'mHG_cutoff', and 'mHG_pval'.
 
     :rtype: pandas.DataFrame
@@ -60,9 +60,9 @@ def batch_t(marker_exp, c_list, coi):
         values are the cluster which that cell is part of.
     :param coi: The cluster of interest.
 
-    :returns: A matrix whose row labels are gene identifiers, and whose columns
-              are the t statistic and t p-value; both of float type.  Their
-              names are 't_stat' and 't_pval'.
+    :returns: A matrix with arbitary row indices whose columns are the gene, t
+              statistic, then t p-value; the last two being of float type.
+              Their names are 'gene', 't_stat' and 't_pval'.
 
     :rtype: pandas.DataFrame
     """
@@ -91,7 +91,7 @@ def mhg_cutoff_value(marker_exp, cutoff_ind):
     return pd.Series()
 
 
-def mhg_slide(marker_exp, cutoff_val, mhg_output):
+def mhg_slide(marker_exp, cutoff_val):
     """Slides cutoff indices in XL-mHG output out of uniform expression groups.
 
     The XL-mHG test may place a cutoff index that "cuts" across a group of
@@ -111,9 +111,6 @@ def mhg_slide(marker_exp, cutoff_val, mhg_output):
         expression.
     :param cutoff_val: A Series whose indices are gene identifiers, and whose
         values are cutoff values corresponding to input cutoff indices.
-    :param mhg_output: A DataFrame whose row labels are gene identifiers, and
-        whose columns are the stat, cutoff, and pval XL-mHG outputs for that
-        gene.
 
     :returns: A Series whose indices are gene identifiers, and values are
               cutoff indices after sliding.
@@ -144,7 +141,7 @@ def discrete_exp(marker_exp, cutoff_val):
     return pd.DataFrame()
 
 
-def TP_TN(discrete_exp, c_list, coi):
+def tp_tn(discrete_exp, c_list, coi):
     """Finds simple true positive/true negative values for the cluster of
     interest.
 
@@ -155,9 +152,51 @@ def TP_TN(discrete_exp, c_list, coi):
         values are the cluster which that cell is part of.
     :param coi: The cluster of interest.
 
-    :returns: A matrix whose row labels are gene identifiers with 2 columns:
-              containing the true positive and true negative values
-              respectively.  Their names are 'TP' and 'TN'.
+    :returns: A matrix with arbitary row indices, and has 3 columns: one for
+              gene name, then 2 containing the true positive and true negative
+              values respectively.  Their names are 'gene', 'TP', and 'TN'.
+
+    :rtype: pandas.DataFrame
+    """
+
+
+def pair_tp_tn(discrete_exp, c_list, coi):
+    """Finds simple true positive/true negative values for the cluster of
+    interest, for all possible pairs of genes.
+
+    :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
+        are gene identifiers, and values are boolean values representing gene
+        expression.
+    :param c_list: A Series whose indices are cell identifiers, and whose
+        values are the cluster which that cell is part of.
+    :param coi: The cluster of interest.
+
+    :returns: A matrix with arbitary row indices and 4 columns: containing the
+              two genes of the pair, then true positive and true negative
+              values respectively.  Their names are 'gene_1', 'gene_2', 'TP',
+              and 'TN'.
+
+    :rtype: pandas.DataFrame
+    """
+
+
+def pair_hg(discrete_exp, c_list, coi):
+    """Finds hypergeometric statistic of gene pairs
+
+    Takes in discrete single-gene expression matrix, and finds the
+    hypergeometric p-value of the sample that includes cells which express both
+    of a pair of genes.
+
+    :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
+        are gene identifiers, and values are boolean values representing gene
+        expression.
+    :param c_list: A Series whose indices are cell identifiers, and whose
+        values are the cluster which that cell is part of.
+    :param coi: The cluster of interest.
+
+    :returns: A matrix with columns: the two genes of the pair, hypergeometric
+              test statistics for that pair.  Their names are 'gene_1',
+              'gene_2', 'HG_stat'.
 
     :rtype: pandas.DataFrame
     """
