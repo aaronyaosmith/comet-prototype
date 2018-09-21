@@ -91,13 +91,16 @@ def main():
         t_test = hgmd.batch_t(marker_exp, cls_ser, cls)
         print('Running XL-mHG on singletons...')
         xlmhg = hgmd.batch_xlmhg(marker_exp, cls_ser, cls, X=X, L=L)
-        print(xlmhg)
         # We need to slide the cutoff indices before using them,
         # to be sure they can be used in the real world.
         cutoff_value = hgmd.mhg_cutoff_value(
-            marker_exp, xlmhg['mHG_cutoff']
+            marker_exp, xlmhg[['gene', 'mHG_cutoff']]
         )
-        xlmhg['mHG_cutoff'] = hgmd.mhg_slide(marker_exp, cutoff_value)
+        xlmhg = xlmhg.merge(
+            hgmd.mhg_slide(marker_exp, cutoff_value), on='gene'
+        )
+        # Update cutoff_value after sliding
+        cutoff_value = xlmhg['cutoff_val']
         print('Creating discrete expression matrix...')
         discrete_exp = hgmd.discrete_exp(marker_exp, cutoff_value)
         print('Running hypergeometric test on pairs...')

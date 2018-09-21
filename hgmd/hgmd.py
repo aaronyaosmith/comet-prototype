@@ -1,6 +1,7 @@
 import pandas as pd
-
+import numpy as np
 import xlmhg as hg
+import scipy.stats as ss
 
 
 def add_complements(marker_exp):
@@ -69,7 +70,7 @@ def batch_xlmhg(marker_exp, c_list, coi, X=None, L=None):
         )
     )
     output = pd.DataFrame()
-    output['cell'] = xlmhg.index
+    output['gene'] = xlmhg.index
     output[['HG_stat', 'mHG_cutoff', 'mHG_pval']] = pd.DataFrame(
         xlmhg.values.tolist(),
         columns=['HG_stat', 'mHG_cutoff', 'mHG_pval']
@@ -93,7 +94,21 @@ def batch_t(marker_exp, c_list, coi):
 
     :rtype: pandas.DataFrame
     """
-    return pd.DataFrame()
+
+    t = marker_exp.apply(
+        lambda col:
+        ss.ttest_ind(
+            col[c_list == coi],
+            col[c_list != coi]
+        )
+    )
+    output = pd.DataFrame()
+    output['gene'] = t.index
+    output[['t_stat', 't_pval']] = pd.DataFrame(
+        t.values.tolist(),
+        columns=['t_stat', 't_pval']
+    )
+    return output
 
 
 def mhg_cutoff_value(marker_exp, cutoff_ind):
@@ -107,15 +122,26 @@ def mhg_cutoff_value(marker_exp, cutoff_ind):
     :param marker_exp: A DataFrame whose rows are cell identifiers, columns are
         gene identifiers, and values are float values representing gene
         expression.
-    :param cutoff_ind: A Series whose indices are gene identifiers, and whose
-        values are XL-mHG cutoff indices.
+    :param cutoff_ind: A DataFrame whose 'gene' column are gene identifiers,
+        and whose 'mHG_cutoff' column are cutoff indices
 
-    :returns: A Series whose indices are gene identifiers, and whose values are
-              cutoff values corresponding to input cutoff indices.
+    :returns: A DataFrame whose 'gene' column are gene identifiers, and whose
+              'cutoff_val' column are cutoff values corresponding to input
+              cutoff indices.
 
-    :rtype: pandas.Series
+    :rtype: pandas.DataFrame
     """
-    return pd.Series()
+    cutoff_ind.index = cutoff_ind['gene']
+    cutoff_val = cutoff_ind.apply(
+        lambda row:
+        marker_exp[row['gene']]
+        .sort_values(ascending=False).
+        iloc[row['mHG_cutoff']],
+        axis='columns'
+    ).rename('cutoff_val')
+    output = cutoff_val.to_frame().reset_index()
+    print(output)
+    return output
 
 
 def mhg_slide(marker_exp, cutoff_val):
@@ -129,22 +155,33 @@ def mhg_slide(marker_exp, cutoff_val):
     function therefore moves the XL-mHG cutoff index so that it falls on a
     measurable gene expression boundary.
 
-    Example: for a sorted gene expression list [0, 0, 0, 0, 1, 4, 5] and XL-mHG
-    cutoff index 2, this function will "slide" the index to 3; marking the
+    Example: for a sorted gene expression list [5, 4, 1, 0, 0, 0] and XL-mHG
+    cutoff index 4, this function will "slide" the index to 3; marking the
     boundary between zero expression and expression value 1.
 
     :param marker_exp: A DataFrame whose rows are cell identifiers, columns are
         gene identifiers, and values are float values representing gene
         expression.
-    :param cutoff_val: A Series whose indices are gene identifiers, and whose
-        values are cutoff values corresponding to input cutoff indices.
+    :param cutoff_val: A DataFrame whose 'gene' column are gene identifiers,
+        and whose 'cutoff_val' column are cutoff values corresponding to input
+        cutoff indices.
 
-    :returns: A Series whose indices are gene identifiers, and values are
-              cutoff indices after sliding.
+    :returns: A DataFrame with 'gene', 'mHG_cutoff', and 'cutoff_val' columns,
+              slid.
 
-    :rtype: pandas.Series
+    :rtype: pandas.DataFrame
     """
-    return pd.Series()
+    cutoff_val.index = cutoff_val['gene']
+    cutoff_ind = cutoff_val.apply(
+        lambda row:
+        np.searchsorted(
+            -marker_exp[row['gene']].sort_values(ascending=False).values,
+            -row['cutoff_val'], side='left'
+        ),
+        axis='columns'
+    )
+    print(cutoff_ind)
+    return pd.DataFrame()
 
 
 def discrete_exp(marker_exp, cutoff_val):
