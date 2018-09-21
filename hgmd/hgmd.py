@@ -1,5 +1,7 @@
 import pandas as pd
 
+import xlmhg as hg
+
 
 def add_complements(marker_exp):
     """Adds columns representing gene complement to a gene expression matrix.
@@ -23,7 +25,10 @@ def add_complements(marker_exp):
 
     :rtype: pandas.DataFrame
     """
-    return pd.DataFrame()
+
+    for gene in marker_exp.columns:
+        marker_exp[gene + '_c'] = -marker_exp[gene]
+    return marker_exp
 
 
 def batch_xlmhg(marker_exp, c_list, coi, X=None, L=None):
@@ -47,7 +52,29 @@ def batch_xlmhg(marker_exp, c_list, coi, X=None, L=None):
 
     :rtype: pandas.DataFrame
     """
-    return pd.DataFrame()
+    # * 1 converts to integer
+    mem_list = (c_list == coi) * 1
+    if X is None:
+        X = 1
+    if L is None:
+        L = marker_exp.shape[0]
+    xlmhg = marker_exp.apply(
+        lambda col:
+        hg.xlmhg_test(
+            mem_list.reindex(
+                col.sort_values(ascending=False).index
+            ).values,
+            X=X,
+            L=L
+        )
+    )
+    output = pd.DataFrame()
+    output['cell'] = xlmhg.index
+    output[['HG_stat', 'mHG_cutoff', 'mHG_pval']] = pd.DataFrame(
+        xlmhg.values.tolist(),
+        columns=['HG_stat', 'mHG_cutoff', 'mHG_pval']
+    )
+    return output
 
 
 def batch_t(marker_exp, c_list, coi):

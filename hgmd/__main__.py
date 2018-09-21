@@ -53,12 +53,12 @@ def main():
     plot_pages = 15
     plot_genes = 15
 
-    csv_path = output_path + '/data/'
-    vis_path = output_path + '/vis/'
-    pickle_path = output_path + '/_pickles/'
-    os.makedirs(csv_path)
-    os.makedirs(vis_path)
-    os.makedirs(pickle_path)
+    csv_path = output_path + 'data/'
+    vis_path = output_path + 'vis/'
+    pickle_path = output_path + '_pickles/'
+    os.makedirs(csv_path, exist_ok=True)
+    os.makedirs(vis_path, exist_ok=True)
+    os.makedirs(pickle_path, exist_ok=True)
 
     if X is not None:
         X = int(X)
@@ -83,13 +83,15 @@ def main():
     marker_exp = hgmd.add_complements(no_complement_marker_exp)
 
     # Enumerate clusters and process each individually in its own folder.
-    clusters = cls_ser.unique().sort()
+    clusters = cls_ser.unique()
+    clusters.sort()
     for cls in clusters:
         print('Processing cluster ' + str(cls) + '...')
         print('Running t test on singletons...')
         t_test = hgmd.batch_t(marker_exp, cls_ser, cls)
         print('Running XL-mHG on singletons...')
         xlmhg = hgmd.batch_xlmhg(marker_exp, cls_ser, cls, X=X, L=L)
+        print(xlmhg)
         # We need to slide the cutoff indices before using them,
         # to be sure they can be used in the real world.
         cutoff_value = hgmd.mhg_cutoff_value(
