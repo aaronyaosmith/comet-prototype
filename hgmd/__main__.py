@@ -2,6 +2,7 @@ import os
 import argparse
 
 from . import hgmd as md
+import sys
 
 
 def main():
@@ -25,9 +26,16 @@ def main():
                      "identifying a cluster.")
     )
     parser.add_argument(
-        'input_path', type=str,
-        help=("the input directory containing markers.txt, tsne.txt, and "
-              "cluster.txt.")
+        'marker', type=str,
+        help=("Marker file input")
+    )
+    parser.add_argument(
+        'tsne', type=str,
+        help=("tsne file input")
+    )
+    parser.add_argument(
+        'cluster', type=str,
+        help=("Cluster file input")
     )
     parser.add_argument(
         'output_path', type=str,
@@ -42,16 +50,12 @@ def main():
         help="L argument for XL-mHG"
     )
     args = parser.parse_args()
-
-    input_path = args.input_path
     output_path = args.output_path
     X = args.X
     L = args.L
-    # input_path = '/home/aaron/Documents/hgmd/data/input/'
-    # output_path = '/home/aaron/Documents/hgmd/data/output/'
-    marker_file = 'markers.txt'
-    tsne_file = 'tsne.txt'
-    cluster_file = 'cluster.txt'
+    marker_file = args.marker
+    tsne_file = args.tsne
+    cluster_file = args.cluster
     min_exp_ratio = 0.4
     plot_pages = 15
     plot_genes = 15
@@ -64,9 +68,9 @@ def main():
         print("Set L to " + str(L) + ".")
     print("Reading data...")
     cell_data = md.get_cell_data(
-        marker_path=(input_path + marker_file),
-        tsne_path=(input_path + tsne_file),
-        cluster_path=(input_path + cluster_file)
+        marker_path=(marker_file),
+        tsne_path=(tsne_file),
+        cluster_path=(cluster_file)
     )
 
     # Enumerate clusters and process each individually in its own folder.
