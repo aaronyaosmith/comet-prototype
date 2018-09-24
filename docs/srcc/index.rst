@@ -1,0 +1,18 @@
+.. HGMD documentation master file, created by
+   sphinx-quickstart on Mon Sep 24 10:32:24 2018.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to HGMD's documentation!
+================================
+
+Contents:
+
+.. toctree::
+   :maxdepth: 3
+	      
+   Installation
+   WebInterface
+   ToolDescription
+
+
