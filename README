@@ -41,6 +41,11 @@ Installation
    directory. Order DOES matter. The tool will start running and begin
    displaying updates on the terminal.
 
+
+
+Find our complete documentation on READTHEDOCS:
+
+https://readthedocs.org/projects/hg-marker-detection/
    
 
 Created by Aaron Yao-Smith (aty25@cornell.edu)
