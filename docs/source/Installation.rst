@@ -1,5 +1,11 @@
 Installation 
 ==================================
+
+Installation of the tool is described below, current demonstration is
+for macOs but similar approach should work fine on Ubuntu/Windows.
+
+
+
 1. Make sure you are using the correct version of Python
 
 
