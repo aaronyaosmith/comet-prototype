@@ -11,7 +11,7 @@ Lets get into the details.
 
 
 Data Pre-Requisites:
-=============
+-------------------
 
 Our tool assumes the user has already done a TSNE plot on the
 cell-by-gene N-dimensional matrix constructed from an RNA-SEQ analysis
@@ -22,7 +22,7 @@ not we can pick out genes within those groupings that are highly
 specifc to that grouping alone.
 
 Methods:
-=========
+-----------
 
 Once we have the inputs, our tool puts to use hypergeometric testing
 to determine a proper threshold level for how specific a gene is to a
