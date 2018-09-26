@@ -19,13 +19,14 @@ on a variety of cells of interest. This should yield a 2-dimensional
 graph with multiple groupings of cells with similar genetic structure,
 a common practice in the comunity. At this point, we ask whether or
 not we can pick out genes within those groupings that are highly
-specifc to that grouping alone.
+specific to that grouping alone.
 
 Methods:
------------
+----------------
 
 Once we have the inputs, our tool puts to use hypergeometric testing
 to determine a proper threshold level for how specific a gene is to a
 given grouping. This involves taking a look at all possible
 combinations of 2 or 3 genes amongst the entire population against the
-grouping. 
+grouping.
+

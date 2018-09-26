@@ -13,7 +13,8 @@ shown below:
 
 
 Once you log in, all that is necessary is to upload the appropriate
-three files and press go. This will redirect you to the waiting
+three files and press go. It will only accept CSV or TXT files. This
+will then redirect you to the waiting
 screen.
 
 Note: Depending on the number of clusters, this tool will take some
