@@ -3,6 +3,9 @@ import argparse
 
 from . import hgmd as md
 import sys
+import multiprocessing 
+import time
+import math
 
 
 def main():
@@ -78,48 +81,40 @@ def main():
     # singleton.
     clusters = cell_data['cluster'].unique()
     clusters.sort()
-    for cluster in clusters:
-        print("Processing cluster " + str(cluster) + "...")
-        cluster_path = output_path + "/cluster_" + str(cluster) + "/"
-        os.makedirs(cluster_path, exist_ok=True)
-        print("Testing singletons...")
-        singleton_data = md.singleton_test(cell_data, cluster, X, L)
-        print("Testing pairs...")
-        pair_data = md.pair_test(
-            cell_data, singleton_data, cluster, L, min_exp_ratio
-        )
-        print("Calculating true positive/negative rates...")
-        singleton_data, pair_data = md.find_TP_TN(
-            cell_data, singleton_data, pair_data, cluster
-        )
-        print("Calculating weighted TP/TN rates...")
-        singleton_data, pair_data = md.find_weighted_TP_TN(
-            cell_data, singleton_data, pair_data, cluster
-        )
-        print("Saving to CSV...")
-        singleton_data.to_csv(cluster_path + "singleton_data.csv")
-        pair_data.to_csv(cluster_path + "pair_data.csv")
-        print("Done.")
-        print("Plotting true positive/negative rates...")
-        md.make_TP_TN_plots(
-            cell_data, singleton_data, pair_data, plot_genes,
-            pair_path=(cluster_path + "TP_TN_plot.pdf"),
-            singleton_path=(cluster_path + "singleton_TP_TN_plot.pdf")
-        )
-        print("Done.")
-        print("Plotting discrete expression...")
-        md.make_discrete_plots(
-            cell_data, singleton_data, pair_data, plot_pages,
-            path=(cluster_path + "discrete_plots.pdf"),
-        )
-        print("Done.")
-        print("Plotting continuous expresssion...")
-        md.make_combined_plots(
-            cell_data, singleton_data, pair_data, plot_pages,
-            pair_path=(cluster_path + "combined_plot.pdf"),
-            singleton_path=(cluster_path + "singleton_combined_plot.pdf")
-        )
-        print("Done.")
+    print('BEEP BOOP')
+    print(clusters)
+    start_time = time.time()
+    
+    #cores is number of simultaneous threads you want to run, can be set at will
+    cores = 1
+    # if core number is bigger than number of clusters, just set it equal to number of clusters
+    if cores > len(clusters):
+        cores = len(clusters)
+    #below loops allow for splitting the job based on core choice
+    group_num  = math.ceil((len(clusters) / cores ))
+    for element in range(group_num):
+        new_clusters = clusters[:cores]
+        print(new_clusters)
+        jobs = []
+        #this loop spawns the workers and runs the code for each assigned.
+        #workers assigned based on the new_clusters list which is the old clusters
+        #split up based on core number e.g.
+        #clusters = [1 2 3 4 5 6] & cores = 4 --> new_clusters = [1 2 3 4], new_clusters = [5 6]
+        for cluster in new_clusters:
+            p = multiprocessing.Process(target=md.process,
+                args=(cluster,cell_data,X,L,min_exp_ratio,plot_pages,plot_genes,output_path))
+            jobs.append(p)
+            p.start()
+        p.join()
+        
+        new_clusters = []
+        clusters = clusters[cores:len(clusters)]
+        print(clusters)
+
+    end_time = time.time()
+
+    print('Took ' + str(end_time-start_time) + ' seconds')
+    print('Which is ' + str( (end_time-start_time)/60 ) + ' minutes')
 
     print("All set!!! Enjoy your PDFs and CSVs.")
 
