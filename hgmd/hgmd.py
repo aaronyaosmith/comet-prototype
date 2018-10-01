@@ -90,7 +90,7 @@ def get_discrete_exp(cells, singleton):
     return exp
 
 
-def get_cell_data(marker_path, tsne_path, cluster_path):
+def get_cell_data(marker_path, tsne_path, cluster_path, gene_list):
     """Parses cell data into a DataFrame, raising exceptions as necessary.
 
 
@@ -117,8 +117,27 @@ def get_cell_data(marker_path, tsne_path, cluster_path):
         ValueError: The data contained in the files at marker_path, etc. is
             invalid.
     """
-
-    cell_data = pd.read_csv(marker_path, index_col=0)
+    #change to reflect gene cross referencing
+    #delete columns that don't show in both lists
+    if gene_list is None:
+        cell_data = pd.read_csv(marker_path, index_col=0)
+    else:
+        cell_data = pd.read_csv(marker_path, index_col=0)
+        #genes must be one single line, comma delimited
+        with open(gene_list, "r") as genes:
+            init_read = genes.read().splitlines()
+            master_str = init_read[0]
+            master_gene_list = master_str.split(",")
+        #master_gene_list contains all relevant genes
+        #now to check them versus the columns in the dataframe
+        #print(cell_data.shape)
+        for column_name in cell_data.columns:
+            if column_name in master_gene_list:
+                   continue
+            else:
+                cell_data.drop(column_name, axis=1,inplace = True)
+        #print(cell_data.shape)
+    
     cluster_data = pd.read_csv(cluster_path, header=None, index_col=0)
     # TODO: are these assignments necessary?
     cluster_data = cluster_data.rename(index=str, columns={1: "cluster"})

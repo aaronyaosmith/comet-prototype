@@ -41,8 +41,16 @@ def main():
         help=("Cluster file input")
     )
     parser.add_argument(
+        '-g', nargs='?', default=None,
+        help="Optional Gene list"
+    )
+    parser.add_argument(
         'output_path', type=str,
         help="the output directory where output files should go"
+    )
+    parser.add_argument(
+        '-C', nargs='?', default=None,
+        help="Num of cores avail for parallelization"
     )
     parser.add_argument(
         '-X', nargs='?', default=None,
@@ -54,15 +62,19 @@ def main():
     )
     args = parser.parse_args()
     output_path = args.output_path
+    C = args.C
     X = args.X
     L = args.L
     marker_file = args.marker
     tsne_file = args.tsne
     cluster_file = args.cluster
+    gene_file = args.g
     min_exp_ratio = 0.4
-    plot_pages = 15
-    plot_genes = 15
 
+    if C is not None:
+        C = int(C)
+    else:
+        C = 1
     if X is not None:
         X = int(X)
         print("Set X to " + str(X) + ".")
@@ -70,17 +82,28 @@ def main():
         L = int(L)
         print("Set L to " + str(L) + ".")
     print("Reading data...")
-    cell_data = md.get_cell_data(
-        marker_path=(marker_file),
-        tsne_path=(tsne_file),
-        cluster_path=(cluster_file)
-    )
+    if gene_file is None:
+        cell_data = md.get_cell_data(
+            marker_path=(marker_file),
+            tsne_path=(tsne_file),
+            cluster_path=(cluster_file),
+            gene_list = None
+            )
+    else:
+        cell_data = md.get_cell_data(
+            marker_path=(marker_file),
+            tsne_path=(tsne_file),
+            cluster_path=(cluster_file),
+            gene_list=(gene_file)
+            )
 
     # Enumerate clusters and process each individually in its own folder.
     # pair_data also contains singleton data, but singleton is just
     # singleton.
     clusters = cell_data['cluster'].unique()
     clusters.sort()
+    plot_pages = len(clusters)
+    plot_genes = len(clusters)
     print('BEEP BOOP')
     print(clusters)
     start_time = time.time()
@@ -90,7 +113,7 @@ def main():
     #instead of new clust just go from (x-1)n to (x)n in clusters
     #but it works for now and the complexity it adds is trivial
     #cores is number of simultaneous threads you want to run, can be set at will
-    cores = 15
+    cores = C
     # if core number is bigger than number of clusters, just set it equal to number of clusters
     if cores > len(clusters):
         cores = len(clusters)
