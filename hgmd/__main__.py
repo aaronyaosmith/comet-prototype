@@ -84,9 +84,13 @@ def main():
     print('BEEP BOOP')
     print(clusters)
     start_time = time.time()
-    
+
+
+    #Below could probably be optimized a little (new_clust not necessary),
+    #instead of new clust just go from (x-1)n to (x)n in clusters
+    #but it works for now and the complexity it adds is trivial
     #cores is number of simultaneous threads you want to run, can be set at will
-    cores = 1
+    cores = 15
     # if core number is bigger than number of clusters, just set it equal to number of clusters
     if cores > len(clusters):
         cores = len(clusters)
