@@ -244,6 +244,22 @@ def tp_tn(discrete_exp, c_list, coi):
 
     :rtype: pandas.DataFrame
     """
+    # * 1 converts to integer
+    mem_list = (c_list == coi) * 1
+    tp_tn = discrete_exp.apply(
+        lambda col: (
+            np.dot(mem_list, col.values) / np.sum(mem_list),
+            np.dot(1 - mem_list, 1 - col.values) / np.sum(1 - mem_list),
+        )
+    )
+    output = pd.DataFrame()
+    output['gene'] = tp_tn.index
+    output[['TP', 'TN']] = pd.DataFrame(
+        tp_tn.values.tolist(),
+        columns=['TP', 'TN']
+    )
+    print(output)
+    return output
 
 
 def pair_tp_tn(discrete_exp, c_list, coi):
@@ -264,10 +280,11 @@ def pair_tp_tn(discrete_exp, c_list, coi):
 
     :rtype: pandas.DataFrame
     """
+    return pd.DataFrame()
 
 
 def pair_hg(discrete_exp, c_list, coi):
-    """Finds hypergeometric statistic of gene pairs
+    """Finds hypergeometric statistic of gene pairs.
 
     Takes in discrete single-gene expression matrix, and finds the
     hypergeometric p-value of the sample that includes cells which express both
