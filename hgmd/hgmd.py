@@ -213,7 +213,7 @@ def discrete_exp(marker_exp, cutoff_val):
     :param marker_exp: A DataFrame whose rows are cell identifiers, columns are
         gene identifiers, and values are float values representing gene
         expression.
-    :param cutoff_ind: A Series whose rows are gene identifiers, and values are
+    :param cutoff_val: A Series whose rows are gene identifiers, and values are
         cutoff values.
 
     :returns: A gene expression matrix identical to marker_exp, but with
@@ -221,7 +221,10 @@ def discrete_exp(marker_exp, cutoff_val):
 
     :rtype: pandas.DataFrame
     """
-    return pd.DataFrame()
+    output = pd.DataFrame()
+    for gene in marker_exp.columns:
+        output[gene] = (marker_exp[gene] > cutoff_val[gene]) * 1
+    return output
 
 
 def tp_tn(discrete_exp, c_list, coi):

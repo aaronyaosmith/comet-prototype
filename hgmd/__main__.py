@@ -108,7 +108,8 @@ def main():
             hgmd.mhg_slide(marker_exp, cutoff_value), on='gene'
         )
         # Update cutoff_value after sliding
-        cutoff_value = xlmhg['cutoff_val']
+        cutoff_value = pd.Series(
+            xlmhg['cutoff_val'].values, index=xlmhg['gene'])
         print('Creating discrete expression matrix...')
         discrete_exp = hgmd.discrete_exp(marker_exp, cutoff_value)
         print('Running hypergeometric test on pairs...')
