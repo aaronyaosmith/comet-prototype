@@ -1,7 +1,17 @@
+"""
+Set of modularized components of COMET's HGMD testing.  For marker expression,
+float comparisions are fuzzy to 1e-3.  Marker expression must therefore be
+normalized to a point where a difference of 0.001 is insignificant.  I.e.
+15.001 and 15.000 are treated as equivalent expression values.
+"""
+
 import pandas as pd
 import numpy as np
 import xlmhg as hg
 import scipy.stats as ss
+
+# Used for comparision of marker expression values.
+FLOAT_PRECISION = 0.001
 
 
 def add_complements(marker_exp):
@@ -117,7 +127,13 @@ def mhg_cutoff_value(marker_exp, cutoff_ind):
     The XL-mHG test outputs the index of the cutoff of highest significance
     between a sample and population.  This functions finds the expression value
     which corresponds to this index.  Cells above this value we define as
-    expressing, and cells at or below this value we define as non-expressing.
+    expressing, and cells below this value we define as non-expressing.  We
+    therefore choose this value to be between the expression at the index, and
+    the expression of the "next-highest" cell.  I.e. for expression [3.0 3.0
+    1.5 1.0 1.0] and index 4, we should choose a cutoff between 1 and 1.5. This
+    implementation will add epsilon to the lower bound (i.e. the value of
+    FLOAT_PRECISION).  In our example, the output will be 1.0 +
+    FLOAT_PRECISION.  For FLOAT_PRECISION = 0.001, this is 1.001.
 
     :param marker_exp: A DataFrame whose rows are cell identifiers, columns are
         gene identifiers, and values are float values representing gene
@@ -138,9 +154,8 @@ def mhg_cutoff_value(marker_exp, cutoff_ind):
         .sort_values(ascending=False).
         iloc[row['mHG_cutoff']],
         axis='columns'
-    ).rename('cutoff_val')
+    ).rename('cutoff_val') + FLOAT_PRECISION
     output = cutoff_val.to_frame().reset_index()
-    print(output)
     return output
 
 
@@ -180,8 +195,12 @@ def mhg_slide(marker_exp, cutoff_val):
         ),
         axis='columns'
     )
-    print(cutoff_ind)
-    return pd.DataFrame()
+    output = cutoff_val
+    output['mHG_cutoff'] = cutoff_ind
+    # Reorder and remove redundant row index
+    output = output.reset_index(
+        drop=True)[['gene', 'mHG_cutoff', 'cutoff_val']]
+    return output
 
 
 def discrete_exp(marker_exp, cutoff_val):

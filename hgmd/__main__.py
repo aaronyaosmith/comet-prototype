@@ -49,9 +49,14 @@ def main():
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
-    min_exp_ratio = 0.4
-    plot_pages = 15
-    plot_genes = 15
+
+    # TODO: gene pairs with expression ratio within the cluster of interest
+    # under [min_exp_ratio] were ignored in hypergeometric testing. This
+    # functionality is currently unimplemented.
+
+    # min_exp_ratio = 0.4
+
+    # TODO: plotting visualizations of the data is unimplemented.
 
     csv_path = output_path + 'data/'
     vis_path = output_path + 'vis/'
@@ -71,6 +76,9 @@ def main():
         input_path + cluster_file,
         index_col=0, names=['cell', 'cluster'], squeeze=True
     )
+
+    # TODO: [tsne] is used only for visualization and is therefore unused right
+    # now
     tsne = pd.read_csv(
         input_path + tsne_file,
         index_col=0, names=['cell', 'tSNE_1', 'tSNE_2']
@@ -92,7 +100,7 @@ def main():
         print('Running XL-mHG on singletons...')
         xlmhg = hgmd.batch_xlmhg(marker_exp, cls_ser, cls, X=X, L=L)
         # We need to slide the cutoff indices before using them,
-        # to be sure they can be used in the real world.
+        # to be sure they can be used in the real world. See hgmd.mhg_slide()
         cutoff_value = hgmd.mhg_cutoff_value(
             marker_exp, xlmhg[['gene', 'mHG_cutoff']]
         )
