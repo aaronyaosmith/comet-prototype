@@ -1,14 +1,21 @@
 """
-Set of modularized components of COMET's HGMD testing.  For marker expression,
-float comparisions are fuzzy to 1e-3.  Marker expression must therefore be
-normalized to a point where a difference of 0.001 is insignificant.  I.e.
-15.001 and 15.000 are treated as equivalent expression values.
+Set of modularized components of COMET's HGMD testing.
+
+For marker expression, float comparisions are fuzzy to 1e-3.  Marker expression
+must therefore be normalized to a point where a difference of 0.001 is
+insignificant.  I.e. 15.001 and 15.000 are treated as equivalent expression
+values.
 """
+
+import re
 
 import pandas as pd
 import numpy as np
 import xlmhg as hg
 import scipy.stats as ss
+
+# TODO: idea, replace 'gene_1', 'gene_2', and 'gene' columns with
+# indices/multi-indices
 
 # Used for comparision of marker expression values.
 FLOAT_PRECISION = 0.001
@@ -147,14 +154,20 @@ def mhg_cutoff_value(marker_exp, cutoff_ind):
 
     :rtype: pandas.DataFrame
     """
+
+    def find_val(row):
+        gene = row['gene']
+        val = marker_exp[gene].sort_values(
+            ascending=False).iloc[row['mHG_cutoff']]
+        if re.compile(".*_c$").match(gene):
+            return val - FLOAT_PRECISION
+        else:
+            return val + FLOAT_PRECISION
+
     cutoff_ind.index = cutoff_ind['gene']
     cutoff_val = cutoff_ind.apply(
-        lambda row:
-        marker_exp[row['gene']]
-        .sort_values(ascending=False).
-        iloc[row['mHG_cutoff']],
-        axis='columns'
-    ).rename('cutoff_val') + FLOAT_PRECISION
+        find_val, axis='columns'
+    ).rename('cutoff_val')
     output = cutoff_val.to_frame().reset_index()
     return output
 
@@ -258,7 +271,6 @@ def tp_tn(discrete_exp, c_list, coi):
         tp_tn.values.tolist(),
         columns=['TP', 'TN']
     )
-    print(output)
     return output
 
 
@@ -280,7 +292,11 @@ def pair_tp_tn(discrete_exp, c_list, coi):
 
     :rtype: pandas.DataFrame
     """
-    return pd.DataFrame()
+    # TODO: unimplemented; I'd use the matrix multiplication here again but
+    # that would be unnecessary since it's done already in pair_hg. Perhaps a
+    # seperate function doing the multiplication would be best?
+    print("WARNING: pair TP/TN testing unimplemented")
+    return pd.DataFrame([], columns=['gene_1', 'gene_2', 'TP', 'TN'])
 
 
 def pair_hg(discrete_exp, c_list, coi):
@@ -332,5 +348,4 @@ def pair_hg(discrete_exp, c_list, coi):
                           'gene_1', 'gene_2', 'HG_stat'])
     output['gene_1'] = gene_map[output['gene_1'].astype(int)]
     output['gene_2'] = gene_map[output['gene_2'].astype(int)]
-    print(output)
     return output

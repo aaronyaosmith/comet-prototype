@@ -104,7 +104,7 @@ def main():
         cutoff_value = hgmd.mhg_cutoff_value(
             marker_exp, xlmhg[['gene', 'mHG_cutoff']]
         )
-        xlmhg = xlmhg.merge(
+        xlmhg = xlmhg[['gene', 'HG_stat', 'mHG_pval']].merge(
             hgmd.mhg_slide(marker_exp, cutoff_value), on='gene'
         )
         # Update cutoff_value after sliding
@@ -119,10 +119,10 @@ def main():
         print('Finding simple true positives/negatives for pairs...')
         pair_tp_tn = hgmd.pair_tp_tn(discrete_exp, cls_ser, cls)
 
-        # Save things to be used for non-cluster-specific things
+        # Save TP/TN values to be used for non-cluster-specific things
         print('Pickling data for later...')
-        sing_tp_tn.to_pickle(pickle_path + 'sing_tp_tn_' + cls)
-        pair_tp_tn.to_pickle(pickle_path + 'pair_tp_tn_' + cls)
+        sing_tp_tn.to_pickle(pickle_path + 'sing_tp_tn_' + str(cls))
+        pair_tp_tn.to_pickle(pickle_path + 'pair_tp_tn_' + str(cls))
 
         # Export to CSV for user
         print('Exporting cluster ' + str(cls) + ' output to CSV...')
@@ -130,20 +130,22 @@ def main():
             .merge(t_test, on='gene')\
             .merge(sing_tp_tn, on='gene')\
             .set_index('gene')\
-            .sort_values(by='HG_rank', ascending=True)
-        sing_output['cutoff_value'] = cutoff_value
+            .sort_values(by='HG_stat', ascending=True)
         sing_output['rank'] = sing_output.reset_index().index + 1
-        sing_output.to_csv(csv_path + '/cluster_' + cls + '_singleton.csv')
+        sing_output.to_csv(
+            csv_path + '/cluster_' + str(cls) + '_singleton.csv'
+        )
         sing_stripped = sing_output[
-            ['gene', 'HG_stat', 'true_positive', 'true_negative']
-        ]
-        sing_stripped.rename(index=str, columns={'gene': 'gene_1'})
+            ['HG_stat', 'TP', 'TN']
+        ].reset_index().rename(index=str, columns={'gene': 'gene_1'})
         pair_output = pair\
-            .merge(pair_tp_tn, on=['gene_1', 'gene_2'])\
+            .merge(pair_tp_tn, on=['gene_1', 'gene_2'], how='left')\
             .append(sing_stripped, sort=False, ignore_index=True)\
-            .sort_values(by='HG_rank', ascending=True)
+            .sort_values(by='HG_stat', ascending=True)
         pair_output['rank'] = pair_output.reset_index().index + 1
-        pair_output.to_csv(csv_path + '/cluster_' + cls + '_pair.csv')
+        pair_output.to_csv(
+            csv_path + '/cluster_' + str(cls) + '_pair.csv'
+        )
 
 
 if __name__ == '__main__':
