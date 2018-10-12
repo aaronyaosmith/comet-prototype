@@ -327,25 +327,24 @@ def pair_hg(discrete_exp, c_list, coi):
     # These products map cell expression count to a pair of genes
     in_cls_product = np.matmul(np.transpose(in_cls_matrix), in_cls_matrix)
     total_product = np.matmul(np.transpose(total_matrix), total_matrix)
-    vhg = np.vectorize(ss.hypergeom.sf, excluded=[1, 2, 4])
 
-    stat_matrix = vhg(
-        in_cls_product, pop_count, in_cls_count, total_product, 1
+    vhg = np.vectorize(ss.hypergeom.sf, excluded=[1, 2, 4], otypes=[np.float])
+
+    # Only apply to upper triangular
+    upper_tri_indices = np.triu_indices(gene_map.size)
+    hg_result = vhg(
+        in_cls_product[upper_tri_indices],
+        pop_count,
+        in_cls_count,
+        total_product[upper_tri_indices],
+        loc=1
     )
 
-    # Converts numpy matrix to pandas DataFrame with coordinates as columnss
-    def indices_merged_arr(arr):
-        m, n = arr.shape
-        I, J = np.ogrid[:m, :n]
-        out = np.empty((m, n, 3), dtype=arr.dtype)
-        out[..., 0] = I
-        out[..., 1] = J
-        out[..., 2] = arr
-        out.shape = (-1, 3)
-        return out
+    print(hg_result)
 
-    output = pd.DataFrame(indices_merged_arr(stat_matrix), columns=[
-                          'gene_1', 'gene_2', 'HG_stat'])
-    output['gene_1'] = gene_map[output['gene_1'].astype(int)]
-    output['gene_2'] = gene_map[output['gene_2'].astype(int)]
+    output = pd.DataFrame()
+    output['gene_1'] = gene_map[upper_tri_indices[0]]
+    output['gene_2'] = gene_map[upper_tri_indices[1]]
+    output['HG_stat'] = hg_result
+    print(output)
     return output
