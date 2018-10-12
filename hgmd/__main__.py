@@ -117,8 +117,16 @@ def main():
             xlmhg['cutoff_val'].values, index=xlmhg['gene'])
         print('Creating discrete expression matrix...')
         discrete_exp = hgmd.discrete_exp(marker_exp, cutoff_value)
+        print('Finding pair expression matrix...')
+        (
+            gene_map, in_cls_count, pop_count,
+            in_cls_product, total_product
+        ) = hgmd.pair_product(discrete_exp, cls_ser, cls)
         print('Running hypergeometric test on pairs...')
-        pair = hgmd.pair_hg(discrete_exp, cls_ser, cls)
+        pair = hgmd.pair_hg(
+            gene_map, in_cls_count, pop_count,
+            in_cls_product, total_product
+        )
         print('Finding simple true positives/negatives for singletons...')
         sing_tp_tn = hgmd.tp_tn(discrete_exp, cls_ser, cls)
         print('Finding simple true positives/negatives for pairs...')

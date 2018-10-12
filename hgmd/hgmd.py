@@ -274,6 +274,84 @@ def tp_tn(discrete_exp, c_list, coi):
     return output
 
 
+def pair_product(discrete_exp, c_list, coi):
+    """Finds paired expression counts.  Returns in matrix form.
+
+    The product of the transpose of the discrete_exp DataFrame is a matrix
+    whose rows and columns correspond to individual genes.  Each value is the
+    number of cells which express both genes (i.e. the dot product of two lists
+    of 1s and 0s encoding expression/nonexpression for their respective genes
+    in the population).  The product therefore encodes joint expression counts
+    for any possible gene pair (including a single gene paired with itself).
+
+    This function produces two matrices: one considering only cells inside the
+    cluster of interest, and one considering all cells in the population.
+
+    This function also produces a list mapping integer indices to gene names,
+    and the population cell count.
+
+    :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
+        are gene identifiers, and values are boolean values representing gene
+        expression.
+    :param c_list: A Series whose indices are cell identifiers, and whose
+        values are the cluster which that cell is part of.
+    :param coi: The cluster of interest.
+
+    :returns: (gene mapping list, cluster count, total count, cluster paired
+              expression count matrix, population paired expression count
+              matrix)
+
+    :rtype: (pandas.Index, int, int, numpy.ndarray, numpy.ndarray)
+    """
+    gene_map = discrete_exp.columns
+    in_cls_matrix = discrete_exp[c_list == coi].values
+    total_matrix = discrete_exp.values
+    in_cls_count = np.size(in_cls_matrix, 0)
+    pop_count = np.size(total_matrix, 0)
+    in_cls_product = np.matmul(np.transpose(in_cls_matrix), in_cls_matrix)
+    total_product = np.matmul(np.transpose(total_matrix), total_matrix)
+    return (gene_map, in_cls_count, pop_count, in_cls_product, total_product)
+
+
+def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product):
+    """Finds hypergeometric statistic of gene pairs.
+
+    Takes in discrete single-gene expression matrix, and finds the
+    hypergeometric p-value of the sample that includes cells which express both
+    of a pair of genes.
+
+    :param gene_map: An Index mapping index values to gene names.
+    :param in_cls_count: The number of cells in the cluster.
+    :param pop_count: The number of cells in the population.
+    :param in_cls_product: The cluster paired expression count matrix.
+    :param total_product: The population paired expression count matrix.
+
+    :returns: A matrix with columns: the two genes of the pair, hypergeometric
+              test statistics for that pair.  Their names are 'gene_1',
+              'gene_2', 'HG_stat'.
+
+    :rtype: pandas.DataFrame
+
+    """
+    vhg = np.vectorize(ss.hypergeom.sf, excluded=[1, 2, 4], otypes=[np.float])
+
+    # Only apply to upper triangular
+    upper_tri_indices = np.triu_indices(gene_map.size)
+    hg_result = vhg(
+        in_cls_product[upper_tri_indices],
+        pop_count,
+        in_cls_count,
+        total_product[upper_tri_indices],
+        loc=1
+    )
+    output = pd.DataFrame({
+        'gene_1': gene_map[upper_tri_indices[0]],
+        'gene_2': gene_map[upper_tri_indices[1]],
+        'HG_stat': hg_result
+    }, columns=['gene_1', 'gene_2', 'HG_stat'])
+    return output
+
+
 def pair_tp_tn(discrete_exp, c_list, coi):
     """Finds simple true positive/true negative values for the cluster of
     interest, for all possible pairs of genes.
@@ -297,54 +375,3 @@ def pair_tp_tn(discrete_exp, c_list, coi):
     # seperate function doing the multiplication would be best?
     print("WARNING: pair TP/TN testing unimplemented")
     return pd.DataFrame([], columns=['gene_1', 'gene_2', 'TP', 'TN'])
-
-
-def pair_hg(discrete_exp, c_list, coi):
-    """Finds hypergeometric statistic of gene pairs.
-
-    Takes in discrete single-gene expression matrix, and finds the
-    hypergeometric p-value of the sample that includes cells which express both
-    of a pair of genes.
-
-    :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
-        are gene identifiers, and values are boolean values representing gene
-        expression.
-    :param c_list: A Series whose indices are cell identifiers, and whose
-        values are the cluster which that cell is part of.
-    :param coi: The cluster of interest.
-
-    :returns: A matrix with columns: the two genes of the pair, hypergeometric
-              test statistics for that pair.  Their names are 'gene_1',
-              'gene_2', 'HG_stat'.
-
-    :rtype: pandas.DataFrame
-    """
-    gene_map = discrete_exp.columns  # list mapping gene names to index numbers
-    in_cls_matrix = discrete_exp[c_list == coi].values
-    total_matrix = discrete_exp.values
-    in_cls_count = np.size(in_cls_matrix, 0)
-    pop_count = np.size(total_matrix, 0)
-    # These products map cell expression count to a pair of genes
-    in_cls_product = np.matmul(np.transpose(in_cls_matrix), in_cls_matrix)
-    total_product = np.matmul(np.transpose(total_matrix), total_matrix)
-
-    vhg = np.vectorize(ss.hypergeom.sf, excluded=[1, 2, 4], otypes=[np.float])
-
-    # Only apply to upper triangular
-    upper_tri_indices = np.triu_indices(gene_map.size)
-    hg_result = vhg(
-        in_cls_product[upper_tri_indices],
-        pop_count,
-        in_cls_count,
-        total_product[upper_tri_indices],
-        loc=1
-    )
-
-    print(hg_result)
-
-    output = pd.DataFrame()
-    output['gene_1'] = gene_map[upper_tri_indices[0]]
-    output['gene_2'] = gene_map[upper_tri_indices[1]]
-    output['HG_stat'] = hg_result
-    print(output)
-    return output
