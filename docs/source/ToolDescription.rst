@@ -15,18 +15,17 @@ Data Pre-Requisites:
 
 Our tool assumes the user has already done a TSNE plot on the
 cell-by-gene N-dimensional matrix constructed from an RNA-SEQ analysis
-on a variety of cells of interest. This should yield a 2-dimensional
-graph with multiple groupings of cells with similar genetic structure,
-a common practice in the comunity. At this point, we ask whether or
-not we can pick out genes within those groupings that are highly
-specific to that grouping alone.
+on a variety of cells of interest. It also necessary to perform the
+standard clustering process beforehand as we will be using those
+clusters during the tests. At the moment, all data should be
+comma-delimited and in either TXT or CSV form.
 
 Methods:
 ----------------
 
-Once we have the inputs, our tool puts to use hypergeometric testing
-to determine a proper threshold level for how specific a gene is to a
-given grouping. This involves taking a look at all possible
-combinations of 2 or 3 genes amongst the entire population against the
-grouping.
+Once we have the inputs, our tool puts to use a hypergeometric test (mHG)
+to determine a proper threshold level for showing gene subpopulations
+in a given cluster.
+
+**full details To Bo Released **
 

@@ -11,10 +11,9 @@ Contents:
 
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    Quickstart
-	      
-   Installation
+	   
 
    ToolDescription
