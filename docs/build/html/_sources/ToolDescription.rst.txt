@@ -28,4 +28,5 @@ Once we have the inputs, our tool puts to use hypergeometric testing
 to determine a proper threshold level for how specific a gene is to a
 given grouping. This involves taking a look at all possible
 combinations of 2 or 3 genes amongst the entire population against the
-grouping. 
+grouping.
+

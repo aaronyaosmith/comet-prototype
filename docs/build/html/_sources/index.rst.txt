@@ -12,11 +12,9 @@ Contents:
 
 .. toctree::
    :maxdepth: 3
+
+   Quickstart
 	      
    Installation
-
-   
-   WebInterface
-
 
    ToolDescription
