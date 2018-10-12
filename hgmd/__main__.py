@@ -61,8 +61,6 @@ def main():
 
     # min_exp_ratio = 0.4
 
-    # TODO: plotting visualizations of the data is unimplemented.
-
     csv_path = output_path + 'data/'
     vis_path = output_path + 'vis/'
     pickle_path = output_path + '_pickles/'
@@ -82,8 +80,6 @@ def main():
         index_col=0, names=['cell', 'cluster'], squeeze=True
     )
 
-    # TODO: [tsne] is used only for visualization and is therefore unused right
-    # now
     tsne = pd.read_csv(
         input_path + tsne_file,
         index_col=0, names=['cell', 'tSNE_1', 'tSNE_2']
