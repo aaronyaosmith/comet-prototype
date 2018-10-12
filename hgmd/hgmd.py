@@ -290,6 +290,15 @@ def pair_product(discrete_exp, c_list, coi):
     This function also produces a list mapping integer indices to gene names,
     and the population cell count.
 
+    Additionally, only the upper triangular part of the output matrices is
+    unique.  This function therefore also returns the upper triangular indices
+    for use by other functions; this is a lazy workaround for the issue that
+    comes with using columns 'gene_1' and 'gene_2' to store gene pairs; the
+    gene pair (A, B) is therefore treated differently than (B, A).  Specifying
+    the upper triangular part prevents (B, A) from existing.
+
+    TODO: fix this redundancy using multi-indices
+
     :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
         are gene identifiers, and values are boolean values representing gene
         expression.
@@ -299,9 +308,10 @@ def pair_product(discrete_exp, c_list, coi):
 
     :returns: (gene mapping list, cluster count, total count, cluster paired
               expression count matrix, population paired expression count
-              matrix)
+              matrix, upper triangular matrix index)
 
-    :rtype: (pandas.Index, int, int, numpy.ndarray, numpy.ndarray)
+    :rtype: (pandas.Index, int, int, numpy.ndarray, numpy.ndarray,
+            numpy.ndarray)
     """
     gene_map = discrete_exp.columns
     in_cls_matrix = discrete_exp[c_list == coi].values
@@ -310,10 +320,17 @@ def pair_product(discrete_exp, c_list, coi):
     pop_count = np.size(total_matrix, 0)
     in_cls_product = np.matmul(np.transpose(in_cls_matrix), in_cls_matrix)
     total_product = np.matmul(np.transpose(total_matrix), total_matrix)
-    return (gene_map, in_cls_count, pop_count, in_cls_product, total_product)
+    upper_tri_indices = np.triu_indices(gene_map.size)
+    return (
+        gene_map,
+        in_cls_count, pop_count,
+        in_cls_product, total_product,
+        upper_tri_indices
+    )
 
 
-def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product):
+def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product,
+            upper_tri_indices):
     """Finds hypergeometric statistic of gene pairs.
 
     Takes in discrete single-gene expression matrix, and finds the
@@ -325,6 +342,7 @@ def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product):
     :param pop_count: The number of cells in the population.
     :param in_cls_product: The cluster paired expression count matrix.
     :param total_product: The population paired expression count matrix.
+    :param upper_tri_indices: An array specifying UT indices; from numpy.utri
 
     :returns: A matrix with columns: the two genes of the pair, hypergeometric
               test statistics for that pair.  Their names are 'gene_1',
@@ -336,7 +354,6 @@ def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product):
     vhg = np.vectorize(ss.hypergeom.sf, excluded=[1, 2, 4], otypes=[np.float])
 
     # Only apply to upper triangular
-    upper_tri_indices = np.triu_indices(gene_map.size)
     hg_result = vhg(
         in_cls_product[upper_tri_indices],
         pop_count,
@@ -352,16 +369,17 @@ def pair_hg(gene_map, in_cls_count, pop_count, in_cls_product, total_product):
     return output
 
 
-def pair_tp_tn(discrete_exp, c_list, coi):
+def pair_tp_tn(gene_map, in_cls_count, pop_count, in_cls_product,
+               total_product, upper_tri_indices):
     """Finds simple true positive/true negative values for the cluster of
     interest, for all possible pairs of genes.
 
-    :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
-        are gene identifiers, and values are boolean values representing gene
-        expression.
-    :param c_list: A Series whose indices are cell identifiers, and whose
-        values are the cluster which that cell is part of.
-    :param coi: The cluster of interest.
+    :param gene_map: An Index mapping index values to gene names.
+    :param in_cls_count: The number of cells in the cluster.
+    :param pop_count: The number of cells in the population.
+    :param in_cls_product: The cluster paired expression count matrix.
+    :param total_product: The population paired expression count matrix.
+    :param upper_tri_indices: An array specifying UT indices; from numpy.utri
 
     :returns: A matrix with arbitary row indices and 4 columns: containing the
               two genes of the pair, then true positive and true negative
@@ -370,8 +388,23 @@ def pair_tp_tn(discrete_exp, c_list, coi):
 
     :rtype: pandas.DataFrame
     """
-    # TODO: unimplemented; I'd use the matrix multiplication here again but
-    # that would be unnecessary since it's done already in pair_hg. Perhaps a
-    # seperate function doing the multiplication would be best?
-    print("WARNING: pair TP/TN testing unimplemented")
-    return pd.DataFrame([], columns=['gene_1', 'gene_2', 'TP', 'TN'])
+
+    def tp(taken_in_cls):
+        return taken_in_cls / in_cls_count
+
+    def tn(taken_in_cls, taken_in_pop):
+        return (
+            ((pop_count - in_cls_count) - (taken_in_pop - taken_in_cls))
+            / (pop_count - in_cls_count)
+        )
+    tp_result = np.vectorize(tp)(in_cls_product[upper_tri_indices])
+    tn_result = np.vectorize(tn)(
+        in_cls_product[upper_tri_indices], total_product[upper_tri_indices]
+    )
+    output = pd.DataFrame({
+        'gene_1': gene_map[upper_tri_indices[0]],
+        'gene_2': gene_map[upper_tri_indices[1]],
+        'TP': tp_result,
+        'TN': tn_result
+    }, columns=['gene_1', 'gene_2', 'TP', 'TN'])
+    return output

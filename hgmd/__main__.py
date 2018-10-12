@@ -120,17 +120,20 @@ def main():
         print('Finding pair expression matrix...')
         (
             gene_map, in_cls_count, pop_count,
-            in_cls_product, total_product
+            in_cls_product, total_product, upper_tri_indices
         ) = hgmd.pair_product(discrete_exp, cls_ser, cls)
         print('Running hypergeometric test on pairs...')
         pair = hgmd.pair_hg(
             gene_map, in_cls_count, pop_count,
-            in_cls_product, total_product
+            in_cls_product, total_product, upper_tri_indices
         )
         print('Finding simple true positives/negatives for singletons...')
         sing_tp_tn = hgmd.tp_tn(discrete_exp, cls_ser, cls)
         print('Finding simple true positives/negatives for pairs...')
-        pair_tp_tn = hgmd.pair_tp_tn(discrete_exp, cls_ser, cls)
+        pair_tp_tn = hgmd.pair_tp_tn(
+            gene_map, in_cls_count, pop_count,
+            in_cls_product, total_product, upper_tri_indices
+        )
 
         # Save TP/TN values to be used for non-cluster-specific things
         print('Pickling data for later...')
