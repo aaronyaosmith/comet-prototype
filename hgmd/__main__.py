@@ -5,6 +5,7 @@ import datetime
 import pandas as pd
 
 from . import hgmd
+from . import visualize as vis
 from docs.source import conf
 
 
@@ -55,6 +56,9 @@ def main():
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
 
+    # TODO: make this an argument for the CLI
+    plot_pages = 30  # number of genes/pairs to plot (highest ranked only)
+
     # TODO: gene pairs with expression ratio within the cluster of interest
     # under [min_exp_ratio] were ignored in hypergeometric testing. This
     # functionality is currently unimplemented.
@@ -95,6 +99,9 @@ def main():
     clusters = cls_ser.unique()
     clusters.sort()
     for cls in clusters:
+
+        # To understand the flow of this section, read the print statements.
+
         print('Processing cluster ' + str(cls) + '...')
         print('Running t test on singletons...')
         t_test = hgmd.batch_t(marker_exp, cls_ser, cls)
@@ -130,13 +137,10 @@ def main():
             gene_map, in_cls_count, pop_count,
             in_cls_product, total_product, upper_tri_indices
         )
-
         # Save TP/TN values to be used for non-cluster-specific things
         print('Pickling data for later...')
         sing_tp_tn.to_pickle(pickle_path + 'sing_tp_tn_' + str(cls))
         pair_tp_tn.to_pickle(pickle_path + 'pair_tp_tn_' + str(cls))
-
-        # Export to CSV for user
         print('Exporting cluster ' + str(cls) + ' output to CSV...')
         sing_output = xlmhg\
             .merge(t_test, on='gene')\
@@ -157,6 +161,30 @@ def main():
         pair_output['rank'] = pair_output.reset_index().index + 1
         pair_output.to_csv(
             csv_path + '/cluster_' + str(cls) + '_pair.csv'
+        )
+
+        # Add cutoff_value to pair_output for plotting
+        pair_output['cutoff_val'] = pair_output.apply(
+            lambda row: (
+                sing_output['cutoff_val'][
+                    sing_output['gene'] == row['gene_1']
+                ].iloc[0] if row['gene_2'] is None else None
+            ),
+            axis='columns'
+        )
+        print('Making discrete expression plots...')
+        d_plot_genes = zip(
+            vis.make_titles(
+                pair_output[
+                    ['gene_1', 'gene_2', 'rank', 'cutoff_val']
+                ].iloc[:plot_pages]
+            ),
+            pair_output['gene_1'].iloc[:plot_pages].values,
+            pair_output['gene_2'].iloc[:plot_pages].values
+        )
+        vis.make_discrete_plots(
+            tsne, discrete_exp, d_plot_genes,
+            vis_path + '/cluster_' + str(cls) + '_discrete.pdf'
         )
 
     # Add text file to keep track of everything
