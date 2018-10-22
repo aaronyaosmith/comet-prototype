@@ -34,7 +34,7 @@ section, but for a basic run of the tool they are unnecessary. The
 only necessary inputs are the marker file (expression matrix), the
 tsne file (tsne plot/coordinates), the cluster file (cluster
 plot/coordinates), and the output folder where your results will be
-fed. Currently, the tool will only accept CSV or TXT files which must
+fed. Currently, the tool will only accept CSV or TXT files which MUST
 be comma delimited. You MUST specify an output folder, so the easiest
 thing to do is to make a new empty directory:
 
