@@ -320,7 +320,7 @@ def pair_product(discrete_exp, c_list, coi):
     pop_count = np.size(total_matrix, 0)
     in_cls_product = np.matmul(np.transpose(in_cls_matrix), in_cls_matrix)
     total_product = np.matmul(np.transpose(total_matrix), total_matrix)
-    upper_tri_indices = np.triu_indices(gene_map.size)
+    upper_tri_indices = np.triu_indices(gene_map.size, 1)
     return (
         gene_map,
         in_cls_count, pop_count,

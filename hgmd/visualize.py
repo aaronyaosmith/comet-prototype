@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-import xlmhg as hg
-import scipy.stats as ss
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.backends.backend_pdf import PdfPages
@@ -28,25 +26,53 @@ CMAP_CONTINUOUS = cm.get_cmap('nipy_spectral')
 CMAP_DISCRETE = cm.get_cmap('bwr')
 
 
-def make_titles(genes):
-    """Vectorized version of make_title(). Takes DataFrame as input.
-
-    genes should have columns 'gene_1', 'gene_2', 'rank', 'cutoff_val'.
+def make_plots(
+    pair, sing, tsne, discrete_exp, marker_exp, plot_pages,
+    combined_path, sing_combined_path, discrete_path, tptn_path,
+    sing_tptn_path
+):
     """
-
+    General function for all visualization generation.  Arguments should be
+    self-explanatory.  See __main__.
+    """
+    # cutoff maps genes to their (absolute) cutoff. I.e. complements are mapped
+    # to positive cutoffs.
+    cutoff = sing['cutoff_val'].abs()
+    # sing_rank maps singletons to their ranking in context of pairs. I.e. the
+    # 1st ranked singleton has rank 11 if there exists 10 pairings (of any 2
+    # genes) with better performance than the singleton.
+    pair_sing_only = pair[pair['gene_2'].isnull()]
+    sing_rank = pd.Series(
+        pair_sing_only['rank'].values, index=pair_sing_only['gene_1']
+    )
+    po_short = pair.iloc[:plot_pages]
     vmt = np.vectorize(make_title)
-    return vmt(
-        genes['gene_1'].values, genes['rank'].values,
-        genes['gene_2'].values, genes['cutoff_val'].values
+    d_plot_genes = zip(
+        zip(
+            vmt(
+                po_short['gene_1'], po_short['gene_2'],
+                po_short['rank'], po_short['gene_1'].map(cutoff)
+            ), vmt(
+                po_short['gene_1'], np.nan,
+                po_short['gene_1'].map(sing_rank),
+                po_short['gene_1'].map(cutoff)
+            ), vmt(
+                po_short['gene_2'], np.nan,
+                po_short['gene_2'].map(sing_rank),
+                po_short['gene_2'].map(cutoff)
+            )
+        ), po_short['gene_1'].values, po_short['gene_2'].values
+    )
+    make_discrete_plots(
+        tsne, discrete_exp, d_plot_genes, discrete_path
     )
 
 
-def make_title(gene_1, rank, gene_2=None, cutoff_val=None):
+def make_title(gene_1, gene_2, rank, cutoff_val):
     """Makes a plot title for a gene or gene pair.
 
     Formatting: for pairs, 'rank $rank: $gene_1+$gene_2', and for singletons,
-    'rank $rank: $gene_1 $cutoff_val'.  gene_2 should be None for singletons,
-    and cutoff_val should be None for pairs.
+    'rank $rank: $gene_1 $cutoff_val'.  gene_2 should be None for singletons.
 
     :param genes: A DataFrame with columns 'gene_1', 'gene_2', 'rank',
         'cutoff_val'.
@@ -57,17 +83,10 @@ def make_title(gene_1, rank, gene_2=None, cutoff_val=None):
     :rtype: string list
     """
 
-    if gene_2 is not None and cutoff_val is not None:
-        raise Exception("Invalid argument")
-
-    if gene_2 is None:
-        return (
-            "rank " + str(rank) + ": " + str(gene_1) + " " + str(cutoff_val)
-        )
-    elif cutoff_val is None:
-        return ("rank " + str(rank) + ": " + str(gene_1) + "+" + str(gene_2))
+    if pd.isna(gene_2):
+        return ("rank %.0f: %s %.3f" % (rank, gene_1, cutoff_val))
     else:
-        raise Exception("Invalid argument")
+        return ("rank %.0f: %s+%s" % (rank, gene_1, gene_2))
 
 
 def make_discrete_plots(tsne, discrete_exp, plot_genes, path):
@@ -83,9 +102,9 @@ def make_discrete_plots(tsne, discrete_exp, plot_genes, path):
     :param discrete_exp: A DataFrame whose rows are cell identifiers, columns
         are gene identifiers, and values are boolean values representing gene
         expression.
-    :param plot_genes: A list of tuples, each element containing a tuple
-        containing titles of the three graphs, the first gene name, and the
-        second gene name. For singletons, the 3rd item is None.
+    :param plot_genes: A list of 3-tuples, where the first element of each
+        tuple is another 3-tuple containing the three plot titles to be used.
+        The other 2 elements are the gene names to be plotted.
     :param path: The path to which the PDF will be saved.
 
     :returns: Nothing.
@@ -96,13 +115,14 @@ def make_discrete_plots(tsne, discrete_exp, plot_genes, path):
         ax.set_title(title)
         ax.set_xlabel('tSNE_1')
         ax.set_ylabel('tSNE_2')
-        sc = ax.scatter(
+        ax.scatter(
             x=coords[0],
             y=coords[1],
             c=coords[2],
-            s=2
+            s=2,
+            cmap=cmap
         )
-        plt.colorbar(sc, ax=ax)
+        # plt.colorbar(sc, ax=ax)
 
     def make_pair_discrete_page(fig, ax_triple, titles, gene_1, gene_2):
         """Make page with three discrete plots given titles and genes."""
@@ -123,7 +143,7 @@ def make_discrete_plots(tsne, discrete_exp, plot_genes, path):
 
     def make_single_discrete_page(fig, ax_triple, title, gene):
         """Make page with one discrete plot given title and gene"""
-        coords_df = tsne.merge(discrete_exp[gene], on='cell')
+        coords_df = tsne.merge(discrete_exp[[gene]], on='cell')
         make_plot(
             ax=ax_triple[0],
             title=title[0],
@@ -135,26 +155,25 @@ def make_discrete_plots(tsne, discrete_exp, plot_genes, path):
             cmap=CMAP_DISCRETE
         )
 
-    pdf = PdfPages(path)
-    for plot_gene in plot_genes:
-        fig, ax_triple = plt.subplots(ncols=3, figsize=(15, 5))
-        if len(plot_gene) == 3:
-            make_pair_discrete_page(
-                fig=fig, ax_triple=ax_triple,
-                titles=plot_gene[0],
-                gene_1=plot_gene[1],
-                gene_2=plot_gene[2]
-            )
-        elif len(plot_gene) == 2:
-            make_single_discrete_page(
-                fig=fig, ax_triple=ax_triple,
-                title=plot_gene[0][0],
-                gene=plot_gene[1]
-            )
-        else:
-            raise Exception("Invalid argument")
-        pdf.savefig(fig)
-        plt.close(fig)
+    with PdfPages(path) as pdf:
+        for plot_gene in plot_genes:
+            # print(plot_gene)
+            fig, ax_triple = plt.subplots(ncols=3, figsize=(15, 5))
+            if pd.isnull(plot_gene[2]):
+                make_single_discrete_page(
+                    fig=fig, ax_triple=ax_triple,
+                    title=plot_gene[0],
+                    gene=plot_gene[1]
+                )
+            else:
+                make_pair_discrete_page(
+                    fig=fig, ax_triple=ax_triple,
+                    titles=plot_gene[0],
+                    gene_1=plot_gene[1],
+                    gene_2=plot_gene[2]
+                )
+            pdf.savefig(fig)
+            plt.close(fig)
 
 
 def make_combined_plots(tsne, discrete_exp, marker_exp, plot_genes, path):

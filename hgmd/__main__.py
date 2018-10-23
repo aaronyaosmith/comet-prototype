@@ -3,32 +3,15 @@ import argparse
 import datetime
 
 import pandas as pd
+import numpy as np
 
 from . import hgmd
 from . import visualize as vis
 from docs.source import conf
 
 
-def main():
-    """Hypergeometric marker detection. Finds markers identifying a cluster.
-
-    Reads in data from single-cell RNA sequencing. Data is in the form of 3
-    CSVs: gene expression data by gene by cell, 2-D tSNE data by cell, and the
-    clusters of interest by cell. Creates a list of genes and a list of gene
-    pairs (including complements), ranked by hypergeometric and t-test
-    significance. The highest ranked marker genes generally best identify the
-    cluster of interest. Saves these lists to CSV and creates gene expression
-    visualizations.
-    """
-    # TODO: more precise description
-
-    start_dt = datetime.datetime.now()
-    print("Started on " + str(start_dt.isoformat()))
-
-    parser = argparse.ArgumentParser(
-        description=("Hypergeometric marker detection. Finds markers "
-                     "identifying a cluster.")
-    )
+def init_parser(parser):
+    """Initialize parser args."""
     parser.add_argument(
         'input_path', type=str,
         help=("the input directory containing markers.txt, tsne.txt, and "
@@ -46,8 +29,45 @@ def main():
         '-L', nargs='?', default=None,
         help="L argument for XL-mHG"
     )
-    args = parser.parse_args()
+    return parser
 
+
+def read_data(cls_path, tsne_path, marker_path):
+    """
+    Reads in cluster series, tsne data, marker expression without complements
+    at given paths.
+    """
+    cls_ser = pd.read_csv(
+        cls_path, index_col=0, names=['cell', 'cluster'], squeeze=True
+    )
+    tsne = pd.read_csv(
+        tsne_path, index_col=0, names=['cell', 'tSNE_1', 'tSNE_2']
+    )
+    no_complement_marker_exp = pd.read_csv(
+        marker_path, index_col=0
+    ).rename_axis('cell')
+    return (cls_ser, tsne, no_complement_marker_exp)
+
+
+def main():
+    """Hypergeometric marker detection. Finds markers identifying a cluster.
+
+    Reads in data from single-cell RNA sequencing. Data is in the form of 3
+    CSVs: gene expression data by gene by cell, 2-D tSNE data by cell, and the
+    clusters of interest by cell. Creates a list of genes and a list of gene
+    pairs (including complements), ranked by hypergeometric and t-test
+    significance. The highest ranked marker genes generally best identify the
+    cluster of interest. Saves these lists to CSV and creates gene expression
+    visualizations.
+    """
+    # TODO: more precise description
+
+    start_dt = datetime.datetime.now()
+    print("Started on " + str(start_dt.isoformat()))
+    args = init_parser(argparse.ArgumentParser(
+        description=("Hypergeometric marker detection. Finds markers "
+                     "identifying a cluster.")
+    )).parse_args()
     input_path = args.input_path
     output_path = args.output_path
     X = args.X
@@ -55,14 +75,11 @@ def main():
     marker_file = 'markers.txt'
     tsne_file = 'tsne.txt'
     cluster_file = 'cluster.txt'
-
-    # TODO: make this an argument for the CLI
-    plot_pages = 30  # number of genes/pairs to plot (highest ranked only)
+    plot_pages = 30  # number of genes to plot (starting with highest ranked)
 
     # TODO: gene pairs with expression ratio within the cluster of interest
     # under [min_exp_ratio] were ignored in hypergeometric testing. This
     # functionality is currently unimplemented.
-
     # min_exp_ratio = 0.4
 
     csv_path = output_path + 'data/'
@@ -71,7 +88,6 @@ def main():
     os.makedirs(csv_path, exist_ok=True)
     os.makedirs(vis_path, exist_ok=True)
     os.makedirs(pickle_path, exist_ok=True)
-
     if X is not None:
         X = int(X)
         print("Set X to " + str(X) + ".")
@@ -79,30 +95,20 @@ def main():
         L = int(L)
         print("Set L to " + str(L) + ".")
     print("Reading data...")
-    cls_ser = pd.read_csv(
-        input_path + cluster_file,
-        index_col=0, names=['cell', 'cluster'], squeeze=True
+    (cls_ser, tsne, no_complement_marker_exp) = read_data(
+        cls_path=input_path + cluster_file,
+        tsne_path=input_path + tsne_file,
+        marker_path=input_path + marker_file
     )
-
-    tsne = pd.read_csv(
-        input_path + tsne_file,
-        index_col=0, names=['cell', 'tSNE_1', 'tSNE_2']
-    )
-    no_complement_marker_exp = pd.read_csv(
-        input_path + marker_file, index_col=0
-    ).rename_axis('cell')
-
     print("Generating complement data...")
     marker_exp = hgmd.add_complements(no_complement_marker_exp)
 
-    # Enumerate clusters and process each individually in its own folder.
+    # Process clusters sequentially
     clusters = cls_ser.unique()
     clusters.sort()
     for cls in clusters:
-
         # To understand the flow of this section, read the print statements.
-
-        print('Processing cluster ' + str(cls) + '...')
+        print('########\n# Processing cluster ' + str(cls) + '...\n########')
         print('Running t test on singletons...')
         t_test = hgmd.batch_t(marker_exp, cls_ser, cls)
         print('Running XL-mHG on singletons...')
@@ -117,7 +123,8 @@ def main():
         )
         # Update cutoff_value after sliding
         cutoff_value = pd.Series(
-            xlmhg['cutoff_val'].values, index=xlmhg['gene'])
+            xlmhg['cutoff_val'].values, index=xlmhg['gene']
+        )
         print('Creating discrete expression matrix...')
         discrete_exp = hgmd.discrete_exp(marker_exp, cutoff_value)
         print('Finding pair expression matrix...')
@@ -162,29 +169,21 @@ def main():
         pair_output.to_csv(
             csv_path + '/cluster_' + str(cls) + '_pair.csv'
         )
-
-        # Add cutoff_value to pair_output for plotting
-        pair_output['cutoff_val'] = pair_output.apply(
-            lambda row: (
-                sing_output['cutoff_val'][
-                    sing_output['gene'] == row['gene_1']
-                ].iloc[0] if row['gene_2'] is None else None
-            ),
-            axis='columns'
-        )
-        print('Making discrete expression plots...')
-        d_plot_genes = zip(
-            vis.make_titles(
-                pair_output[
-                    ['gene_1', 'gene_2', 'rank', 'cutoff_val']
-                ].iloc[:plot_pages]
-            ),
-            pair_output['gene_1'].iloc[:plot_pages].values,
-            pair_output['gene_2'].iloc[:plot_pages].values
-        )
-        vis.make_discrete_plots(
-            tsne, discrete_exp, d_plot_genes,
-            vis_path + '/cluster_' + str(cls) + '_discrete.pdf'
+        print('Drawing plots...')
+        vis.make_plots(
+            pair=pair_output,
+            sing=sing_output,
+            tsne=tsne,
+            discrete_exp=discrete_exp,
+            marker_exp=marker_exp,
+            plot_pages=plot_pages,
+            combined_path=vis_path + '/cluster_' + str(cls) + '_combined.pdf',
+            sing_combined_path=vis_path + '/cluster_' +
+            str(cls) + '_singleton_discrete.pdf',
+            discrete_path=vis_path + '/cluster_' + str(cls) + '_discrete.pdf',
+            tptn_path=vis_path + 'cluster_' + str(cls) + '_TP_TN.pdf',
+            sing_tptn_path=vis_path + 'cluster_' +
+            str(cls) + '_singleton_TP_TN.pdf'
         )
 
     # Add text file to keep track of everything
