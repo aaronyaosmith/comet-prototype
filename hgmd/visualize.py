@@ -66,6 +66,7 @@ def make_plots(
             )
         ), p_short['gene_1'].values, p_short['gene_2'].values
     )
+    print("Drawing discrete plots...")
     make_discrete_plots(
         tsne, discrete_exp, d_plot_genes, discrete_path
     )
@@ -82,6 +83,7 @@ def make_plots(
             )
         ), p_short['gene_1'].values, p_short['gene_2'].values
     )
+    print("Drawing combined plots...")
     make_combined_plots(
         tsne, discrete_exp, marker_exp, c_plot_genes, combined_path
     )
@@ -93,8 +95,20 @@ def make_plots(
             ), repeat(np.nan)
         ), s_short.index, repeat(np.nan)
     )
+    print("Drawing singleton combined plots...")
     make_combined_plots(
         tsne, discrete_exp, marker_exp, c_s_plot_genes, sing_combined_path
+    )
+    pair_tp_tn = pair[['gene_1', 'gene_2', 'TP', 'TN']]
+    sing_tp_tn = sing[['TP', 'TN']]
+    print("Drawing true positive/negative plots...")
+    make_tp_tn_plot(
+        zip(p_short['gene_1'], p_short['gene_2']),
+        sing_tp_tn, pair_tp_tn, tptn_path
+    )
+    make_tp_tn_plot(
+        zip(s_short.index, repeat(np.nan)),
+        sing_tp_tn, pair_tp_tn, sing_tptn_path
     )
 
 
@@ -296,20 +310,54 @@ def make_combined_plots(tsne, discrete_exp, marker_exp, plot_genes, path):
             plt.close(fig)
 
 
-def make_TP_TN_plots(plot_genes, sing_tp_tn, pair_tp_tn, path):
+def make_tp_tn_plot(plot_genes, sing_tp_tn, pair_tp_tn, path):
     """Plots TP/TN rates of genes/pairs to PDF.
 
     For each gene/gene pair listed in plot_genes, plot their TP/TN rate on a
     scatterplot, labeling the point with the gene/gene pair name.  When done,
     output this scatterplot to PDF and save to path.
 
-    :param plot_genes: An array whose elements are either single gene names, or
-        tuples containing two gene names.
-    :param sing_tp_tn: A DataFrame with 'gene', 'TP', and 'TN' columns.
+    :param plot_genes: An array whose elements are tuples representing gene
+        pairs.  If the second element is empty, it represents a singleton.
+    :param sing_tp_tn: A DataFrame with ''TP', and 'TN' columns, with gene
+        indices
     :param pair_tp_tn: A DataFrame with 'gene_1', 'gene_2', 'TP', and 'TN'
         columns.
     :param path: The path to which the PDF will be saved.
 
     :returns: Nothing.
     """
-    raise Exception("Unimplemented")
+    PADDING = 0.002
+
+    fig = plt.figure(figsize=[15, 15])
+    plt.xlabel("True positive")
+    plt.ylabel("True negative")
+    plt.title("True positive/negative")
+    plt.axis([0.0, 1.1, 0.0, 1.1])
+
+    def get_data(genes):
+        if pd.isnull(genes[1]):
+            title = genes[0]
+            data_row = sing_tp_tn.loc[genes[0]]
+        else:
+            title = genes[0] + "+" + genes[1]
+            data_row = pair_tp_tn[
+                ((pair_tp_tn['gene_1'] == genes[0]) &
+                 (pair_tp_tn['gene_2'] == genes[1]))
+                | ((pair_tp_tn['gene_1'] == genes[1]) &
+                   (pair_tp_tn['gene_2'] == genes[0]))
+            ]
+        return [title, data_row['TP'], data_row['TN']]
+
+    coords_df = pd.DataFrame()
+    data = list(map(get_data, list(plot_genes)))
+    coords_df[['title', 'TP', 'TN']] = pd.DataFrame(
+        data, columns=['title', 'TP', 'TN']
+    )
+
+    plt.scatter(coords_df['TP'], coords_df['TN'], s=3)
+    for index, row in coords_df.iterrows():
+        plt.annotate(row['title'], (row['TP'] + PADDING, row['TN'] + PADDING))
+
+    fig.savefig(path)
+    plt.close(fig)
