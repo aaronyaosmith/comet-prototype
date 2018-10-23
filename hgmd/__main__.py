@@ -179,7 +179,7 @@ def main():
             plot_pages=plot_pages,
             combined_path=vis_path + '/cluster_' + str(cls) + '_combined.pdf',
             sing_combined_path=vis_path + '/cluster_' +
-            str(cls) + '_singleton_discrete.pdf',
+            str(cls) + '_singleton_combined.pdf',
             discrete_path=vis_path + '/cluster_' + str(cls) + '_discrete.pdf',
             tptn_path=vis_path + 'cluster_' + str(cls) + '_TP_TN.pdf',
             sing_tptn_path=vis_path + 'cluster_' +
