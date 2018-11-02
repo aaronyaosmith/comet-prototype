@@ -1,10 +1,18 @@
-COMET User Manual
+.. _Github: https://github.com/aaronyaosmith/HG_marker_detection
+
+.. |comet| image:: _static/COMET.png
+   :width: 25%
+
+|comet|
+
+User Manual
 =====================================
 
-Identifying candidate marker panels from single-cell transcriptomic data.
+**COMET: Identifying candidate marker panels from single-cell transcriptomic data.**
 
 Version |release|.
-	       
+
+Find us on Github_!
 
 .. code-block:: none
 		
@@ -65,11 +73,12 @@ Version |release|.
     Drawing true positive/negative plots...
     Ended on 2018-11-01T22:56:28.103160
 
-
 .. toctree::
-     :maxdepth: 2
-     :caption: Contents:
+   :maxdepth: 2
 
-     main
-     hgmd
-     visualize
+   quickstart
+   usage
+   examples
+   background
+   details
+   api
