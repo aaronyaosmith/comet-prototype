@@ -24,3 +24,4 @@ master_doc = 'index'
 pygments_style = 'sphinx'
 html_theme = 'alabaster'
 html_static_path = ['_static']
+html_favicon = '_static/COMET_favicon.ico'
