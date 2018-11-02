@@ -6,6 +6,7 @@ extensions = [
     'sphinx.ext.autodoc', ]
 
 project = 'COMET'
+highlight_language = 'python'
 copyright = '2018, Aaron Yao-Smith'
 author = 'Aaron Yao-Smith'
 version = '0.1'

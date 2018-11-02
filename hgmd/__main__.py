@@ -3,7 +3,6 @@ import argparse
 import datetime
 
 import pandas as pd
-import numpy as np
 
 from . import hgmd
 from . import visualize as vis
@@ -63,11 +62,12 @@ def main():
     # TODO: more precise description
 
     start_dt = datetime.datetime.now()
-    print("Started on " + str(start_dt.isoformat()))
     args = init_parser(argparse.ArgumentParser(
         description=("Hypergeometric marker detection. Finds markers "
                      "identifying a cluster.")
     )).parse_args()
+    print("Welcome to COMET " + conf.version + "!!\n")
+    print("Started on " + str(start_dt.isoformat()))
     input_path = args.input_path
     output_path = args.output_path
     X = args.X

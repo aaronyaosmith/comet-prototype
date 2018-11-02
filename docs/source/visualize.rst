@@ -1,0 +1,2 @@
+.. automodule:: hgmd.visualize
+    :members:
