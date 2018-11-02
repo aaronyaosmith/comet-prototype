@@ -3,6 +3,9 @@ COMET User Manual
 
 Identifying candidate marker panels from single-cell transcriptomic data.
 
+Version |release|.
+	       
+
 .. code-block:: none
 		
     $ hgmd input/ output/
@@ -61,10 +64,12 @@ Identifying candidate marker panels from single-cell transcriptomic data.
     Drawing singleton combined plots...
     Drawing true positive/negative plots...
     Ended on 2018-11-01T22:56:28.103160
-    $
 
 
 .. toctree::
      :maxdepth: 2
      :caption: Contents:
-.. highlight:: console
+
+     main
+     hgmd
+     visualize

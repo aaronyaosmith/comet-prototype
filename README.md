@@ -9,4 +9,6 @@
 
   Created by Aaron Yao-Smith (aty25@cornell.edu).
 
-  Maintained by Conor Delaney (cdelaney@bcb.dfci.harvard.edu)
+  Maintained by Conor Delaney (cdelaney@bcb.dfci.harvard.edu).
+  
+  Uses the [XL-mHG](https://github.com/flo-compbio/xlmhg) test, created by Florian Wagner.
