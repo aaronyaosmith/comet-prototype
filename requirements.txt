@@ -4,7 +4,6 @@ cycler==0.10.0
 Cython==0.29
 decorator==4.3.0
 future==0.17.1
--e git+https://github.com/aaronyaosmith/HG_marker_detection.git@403ac1fae2b9127583d8362a183e97362217dcea#egg=hgmd
 idna==2.7
 ipython-genutils==0.2.0
 jsonschema==2.6.0
