@@ -1,7 +1,7 @@
-API
-=====
+API reference
+================
 
-Internal documentation.
+At the moment, these functions are designed for internal use only.
 
 .. toctree::
    :maxdepth: 2

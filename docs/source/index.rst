@@ -75,6 +75,7 @@ Find us on Github_!
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
    quickstart
    usage
