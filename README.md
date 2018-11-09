@@ -3,7 +3,7 @@
 [![Documentation Status](https://readthedocs.org/projects/hgmd/badge/?version=latest)](https://hgmd.readthedocs.io/en/latest/?badge=latest)
 
 ## Installation and Usage
-  Check out the [COMET User Manual](https://hgmd.readthedocs.io/en/latest/)!
+  Check out the [COMET documentation](https://hgmd.readthedocs.io/en/latest/)!
 
 ## About us
 

@@ -25,3 +25,4 @@ pygments_style = 'sphinx'
 html_theme = 'alabaster'
 html_static_path = ['_static']
 html_favicon = '_static/COMET_favicon.ico'
+html_short_title = 'COMET'
