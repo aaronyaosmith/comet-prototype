@@ -1,7 +1,15 @@
+.. |pair_csv| image:: _static/pair_csv_example.png
+.. |sing_csv| image:: _static/singleton_csv_example.png
+.. |combined| image:: _static/cluster_Spleen_1_combined-01.jpg
+.. |discrete| image:: _static/cluster_Spleen_1_discrete-01.jpg
+.. |sing_cmb| image:: _static/cluster_Spleen_1_singleton_combined-01.jpg
+.. |sing_TPTN| image:: _static/cluster_Spleen_1_singleton_TP_TN-1.jpg
+.. |TPTN| image:: _static/cluster_Spleen_1_TP_TN-1.jpg
+
 Examples
 ==========
 
-Examples of COMET usage.
+Following is an example of COMET usage and output on the command line:
 
 .. code-block:: none
 		
@@ -62,4 +70,23 @@ Examples of COMET usage.
     Drawing true positive/negative plots...
     Ended on 2018-11-01T22:56:28.103160
 
+Following are examples of COMET output:
+
+|pair_csv| *CSV output*
+
+|sing_csv| *Singleton-only CSV output*
+
+|combined| *Combined continuous/discrete plots*
+
+|discrete| *Discrete plots comparing combinations/singletons*
+
+|sing_cmb| *Singleton-only combined plots*
+
+|TPTN| *True positive/negative plot*
+
+|sing_TPTN| *Singleton-only TP/TN plot*
+
+
+
+    
 .. toctree::
