@@ -36,7 +36,9 @@ For each gene, COMET first compares the cluster of interest with the rest of the
 
 Then, COMET runs the XL-mHG test for each gene, comparing the cluster of interest with the rest of the population. This generates a hypergeometric test statistic measuring statistical significance, as well a 'best' cutoff for conversion from continuous to discrete expression values that best differentiates the cluster.
 
-This cutoff is not in terms of a expression value, but rather a specific index in a list of cells sorted by their expression value (see the 'program flow' figure on the top of the page). Therefore, the exact expression value of a cell does not matter, only its position relative to other cells. For example, an outlier cell with an expression value 10 times higher than any other cell will produce the same results as an outlier cell with an expression 10,000 times higher; all that matters is that the cell is 1st place in expression value.
+This cutoff is not in terms of a expression value, but rather a specific index in a list of cells sorted by their expression value (see the 'program flow' figure on the top of the page). Therefore, the exact expression value of a cell does not matter, only its position relative to other cells.
+
+For example, an outlier cell with an expression value 10 times higher than any other cell will produce the same results as an outlier cell with an expression 10,000 times higher; all that matters is that the cell is 1st place in expression value.
 
 Both these tests can only be run on single genes ('singletons').
 
@@ -91,28 +93,65 @@ In this way, COMET finds the **k** and **M** parameters for the hypergeometric t
 3+ gene combinations
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Combinations of 3 or more genes are currently unimplemented in COMET. However, the hypergeometric parameters for 3+ gene combinations can be found by first considering a 2-gene subset of the combination. Take this 2-gene subset's discrete expression matrix (i.e. the matrix with cells as columns and gene pairs as rows, with value 1 for a cell expressing both genes in the pair, and 0 otherwise), and multiply it by the transpose of the single-gene discrete expression matrix. This yields a matrix where each element is the number of cells which express the 3-gene combination correspond to its location's gene pair and single gene.
+Combinations of 3 or more genes are currently unimplemented in COMET. However, the hypergeometric parameters for 3+ gene combinations can be found by first considering a 2-gene subset of the combination. Take this 2-gene subset's discrete expression matrix (i.e. the matrix with cells as columns and gene pairs as rows, with value 1 for a cell expressing both genes in the pair, and 0 otherwise), and multiply it by the transpose of the single-gene discrete expression matrix.
 
-Using this method, **k** and **M** can again be found.
+This yields a matrix where each element is the number of cells which express the 3-gene combination correspond to its location's gene pair and single gene; using this method, then, **k** and **M** can again be found.
 
 6. Run hypergeometric test on pairs using counts.
 ----------------------------------------------------
 
-Using these parameters, COMET then finds the hypergeometric test statistic for all possible gene pairs (including complement genes). The relevant test statistic is the 'survival function', which measures the probability that a randomly selected cluster of the same number of cells as our cluster of interest will have the same number or greater of expressing cells. The 'best' genes therefore minimize this statistic; COMET ranks all gene singletons/combinations by this statistic.
+Using these parameters, COMET then finds the hypergeometric test statistic for all possible gene pairs (including complement genes). The relevant test statistic is the 'survival function', which measures the probability that a randomly selected cluster of the same number of cells as our cluster of interest will have the same number or greater of expressing cells.
+
+The 'best' genes therefore minimize this statistic; COMET ranks all gene singletons/combinations by this statistic.
 
 7. Calculate true positive/negative.
 -------------------------------------
 
-(based on matrix multiplication results for pairs)
+Once COMET has calculated the hypergeometric statistic, it finds true positive and true negative rates associated with each gene singleton/combination, using the matrix products found earlier.
+
+True positive is found by dividing the number of expressing cells in the cluster by the total cell count of the cluster; true negative is found by dividing the number of expressing cells outside the cluster by the total cell count outside the cluster.
+
+Using the hypergeometric notation discussed earlier, we can write:
+
+.. math::
+
+   \text{true positive} = \frac{k}{s} \quad \text{true negative} = \frac{M}{N}
+   
 
 8. Export statistical results.
 ---------------------------------
 
-(to CSV: explain each column)
+COMET's statistical results are exported to two CSV files per cluster: one including statistical values for exclusively singletons, and one including all combinations. Rows are genes or gene combinations, columns are values associated with that gene/combination.
+
+The columns of the singleton statistical data are:
+
+* ``gene``: the name of the gene.
+* ``HG_stat``: the hypergeometric test statistic. Genes are ranked using this value.
+* ``mHG_pval``: the statistical significance of the cutoff which the XL-mHG test has chosen.
+* ``mHG_cutoff_index``: the index which the XL-mHG has chosen, after sliding.
+* ``mHG_cutoff_value``: the gene expression cutoff value corresponding to the chosen index.
+* ``t_stat``: the t-test statistic.
+* ``t_pval``: the t-test p significance value corresponding to the test statistic.
+* ``TP``: the true positive rate.
+* ``TN``: the true negative rate.
+* ``rank``: sequential ranking based on ``HG_stat``, where lower ``HG_stat`` is better ranking. No two genes are ranked the same; those with identical hypergeometric statistic values are ranked arbitrarily relative to one another.
+
+The columns of the combination statistical data are the same as those of the singleton data with some exceptions:
+
+* ``gene`` is replaced by ``gene_1`` and ``gene_2`` (combinations of 3+ genes are unimplemented as of yet).
+* ``mHG_pval``, ``mHG_cutoff_index``, ``mHG_cutoff_value``, ``t_stat``, and ``t_pval`` are omitted, since they are irrelevant to non-singletons.
 
 9. Generate and export visualizations.
 -----------------------------------------
 
-(explain each visual)
+For each cluster, COMET generates five PDF files containing visualizations of the statistical results. Each PDF``s name is prefixed by the cluster name, and includes visuals for only the first few highest ranked genes/combinations.
+
+The PDF files are:
+
+* ``(cluster)_combined.pdf``: compares discrete expression and continuous expression for each gene in a combination on a tSNE plot.
+* ``(cluster)_discrete.pdf``: compares discrete expression of a gene combination with that of its components.
+* ``(cluster)_TP_TN.pdf``: plots true positive/negative rates of each gene.
+* ``(cluster)_singleton_combined.pdf``: same as the ``combined`` plot, but includes only singletons.
+* ``(cluster)_singleton_TP_TN.pdf``: same as the ``TP_TN`` plot, but includes only singletons.
 
 .. toctree::
