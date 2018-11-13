@@ -1,0 +1,248 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Details of operation &#8212; COMET 0.1.0-alpha documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/COMET_favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage" href="usage.html" />
+    <link rel="prev" title="Background" href="background.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="details-of-operation">
+<h1>Details of operation<a class="headerlink" href="#details-of-operation" title="Permalink to this headline">¶</a></h1>
+<p>COMET iterates sequentially through all user-specified clusters, generating statistics/visuals for one at a time.</p>
+<div class="contents local topic" id="per-cluster-program-flow">
+<p class="topic-title first">Per-cluster program flow</p>
+<ul class="simple">
+<li><a class="reference internal" href="#read-in-data-from-csv" id="id1">1. Read in data from CSV.</a></li>
+<li><a class="reference internal" href="#run-t-and-xl-mhg-tests-on-singletons" id="id2">2. Run t and XL-mHG tests on singletons.</a></li>
+<li><a class="reference internal" href="#slide-xl-mhg-cutoff-values" id="id3">3. ‘Slide’ XL-mHG cutoff values.</a></li>
+<li><a class="reference internal" href="#generate-discrete-expression-matrix-using-cutoffs" id="id4">4. Generate discrete expression matrix using cutoffs.</a></li>
+<li><a class="reference internal" href="#find-cluster-and-population-pair-expression-counts" id="id5">5. Find cluster and population pair expression counts.</a><ul>
+<li><a class="reference internal" href="#finding-the-parameters-for-gene-pairs" id="id6">Finding the parameters for gene pairs</a></li>
+<li><a class="reference internal" href="#gene-combinations" id="id7">3+ gene combinations</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#run-hypergeometric-test-on-pairs-using-counts" id="id8">6. Run hypergeometric test on pairs using counts.</a></li>
+<li><a class="reference internal" href="#calculate-true-positive-negative" id="id9">7. Calculate true positive/negative.</a></li>
+<li><a class="reference internal" href="#export-statistical-results" id="id10">8. Export statistical results.</a></li>
+<li><a class="reference internal" href="#generate-and-export-visualizations" id="id11">9. Generate and export visualizations.</a></li>
+</ul>
+</div>
+<p><img alt="flow" src="_images/flow.jpg" /></p>
+<p><em>A simplified version of the program flow.</em></p>
+<p><em>First, continuous expression values are converted to discrete via the XL-mHG test. Then, genes are combined and their combinations tests via the hypergeometric test. Finally, these combinations are ranked, assessed, and plotted.</em></p>
+<div class="section" id="read-in-data-from-csv">
+<h2><a class="toc-backref" href="#id1">1. Read in data from CSV.</a><a class="headerlink" href="#read-in-data-from-csv" title="Permalink to this headline">¶</a></h2>
+<p>User-specified data is read in via CSV format (currently, requiring comma delimiters.) See <a class="reference internal" href="usage.html"><span class="doc">Usage</span></a> for details of the format of this data.</p>
+<p>There are three components:</p>
+<ul class="simple">
+<li>Per-cell gene expression values. Each gene must be normalized over cells.</li>
+<li>Cluster membership by cell.</li>
+<li>Per-cell 2-D tSNE values, for plotting.</li>
+</ul>
+<p>In order to test ‘complement’ genes (i.e. expressed as the absence of a gene rather than the presence of a gene), COMET creates a new complement gene for each gene. These complement genes are treated exactly the same as normal genes, but their expression values are the negative of the expression values of their analogous gene. This allows COMET to find separate mHG cutoff values for genes and their complements.</p>
+</div>
+<div class="section" id="run-t-and-xl-mhg-tests-on-singletons">
+<h2><a class="toc-backref" href="#id2">2. Run t and XL-mHG tests on singletons.</a><a class="headerlink" href="#run-t-and-xl-mhg-tests-on-singletons" title="Permalink to this headline">¶</a></h2>
+<p>For each gene, COMET first compares the cluster of interest with the rest of the population using a t-test, for comparison with XL-mHG results. The t-test measures the statistical significance of the continuous expression values of the cluster of interest if the cluster comes from the rest of the population. This assumes a t distribution of values (similar to a Normal distribution).</p>
+<p>Then, COMET runs the XL-mHG test for each gene, comparing the cluster of interest with the rest of the population. This generates a hypergeometric test statistic measuring statistical significance, as well a ‘best’ cutoff for conversion from continuous to discrete expression values that best differentiates the cluster.</p>
+<p>This cutoff is not in terms of a expression value, but rather a specific index in a list of cells sorted by their expression value (see the ‘program flow’ figure on the top of the page). Therefore, the exact expression value of a cell does not matter, only its position relative to other cells.</p>
+<p>For example, an outlier cell with an expression value 10 times higher than any other cell will produce the same results as an outlier cell with an expression 10,000 times higher; all that matters is that the cell is 1st place in expression value.</p>
+<p>Both these tests can only be run on single genes (‘singletons’).</p>
+</div>
+<div class="section" id="slide-xl-mhg-cutoff-values">
+<h2><a class="toc-backref" href="#id3">3. ‘Slide’ XL-mHG cutoff values.</a><a class="headerlink" href="#slide-xl-mhg-cutoff-values" title="Permalink to this headline">¶</a></h2>
+<p>Since we cannot distinguish between cells of the same expression value, COMET needs to convert this cutoff index into an actual cutoff value. It accomplishes this by ‘sliding up’ the cutoff index in the sorted list of cells until the index encounters a different expression value.</p>
+<p>For example, expression data often contains many cells that do not express the gene of interest at all. These cells have an expression value of 0. In the case that the XL-mHG cutoff index lands on a cell with 0 expression, COMET will ‘slide’ up the cutoff index in the sorted list of cells until it finds a cell with non-zero expression.</p>
+<p>In this case, since cells cannot have negative expression, COMET will choose a cutoff value between 0 and the lowest non-zero expression value, sliding ‘upwards’ towards higher values. This results in a non-expression and expression group, where non-expression is exclusively 0-expression.</p>
+<p>COMET will always slide ‘upwards’. In the above case of 0-expression, sliding ‘downwards’ and choosing a cutoff below 0 would create an non-expression group of 0 members; no cell expresses below 0!</p>
+<p>The exception is if COMET reaches the ‘top’ of the list: if it chooses a cutoff value above any cell, the expression group will have zero members. In this case, COMET will turn around and slide ‘downwards’ until it finds a suitable cutoff value.</p>
+<p>‘Complement’ genes are treated in the same way, even though their expression values are negative.</p>
+</div>
+<div class="section" id="generate-discrete-expression-matrix-using-cutoffs">
+<h2><a class="toc-backref" href="#id4">4. Generate discrete expression matrix using cutoffs.</a><a class="headerlink" href="#generate-discrete-expression-matrix-using-cutoffs" title="Permalink to this headline">¶</a></h2>
+<p>Now that COMET has generated cutoff values for each gene, it converts the dataset of continuous gene expression to one of discrete gene expression: where expression is represented as a ‘1’, and non-expression as a ‘0’. This dataset is represented as a matrix: with genes as rows and cells as columns.</p>
+</div>
+<div class="section" id="find-cluster-and-population-pair-expression-counts">
+<h2><a class="toc-backref" href="#id5">5. Find cluster and population pair expression counts.</a><a class="headerlink" href="#find-cluster-and-population-pair-expression-counts" title="Permalink to this headline">¶</a></h2>
+<p>To rank combinations of genes, we want to find their hypergeometric significance value, defining a gene combination as the union of multiple genes: a gene combination is expressed only if all component genes are expressed.</p>
+<p>The parameters of the hypergeometric test are as follows:
+- Number of successes (i.e. number of expressing cells in the cluster).
+- Sample size (i.e. number of cells in the cluster).
+- Number of successes in the population.
+- Population size.</p>
+<p>These parameters are usually referred to as <strong>k</strong>, <strong>s</strong>, <strong>M</strong>, and <strong>N</strong>, respectively.</p>
+<div class="section" id="finding-the-parameters-for-gene-pairs">
+<h3><a class="toc-backref" href="#id6">Finding the parameters for gene pairs</a><a class="headerlink" href="#finding-the-parameters-for-gene-pairs" title="Permalink to this headline">¶</a></h3>
+<p>First, consider a combination of two genes:</p>
+<p>We can find the number of expressing cells of the pair in the cluster and in the population through matrix multiplication. COMET multiplies the discrete expression matrix (where genes are rows, cells columns, and values are either 0 or 1) by its transpose. This yields a square matrix whose rows and columns correspond to single genes.</p>
+<p>Consider an element of this matrix product, where its row corresponds to gene ‘A’, and column to gene ‘B’. The value of this element is the dot product of the two rows corresponding to gene A and B in the initial discrete expression matrix. Since the values of these two rows are either 0 or 1, this dot product is the number of times that a 1 occurs in both rows at the same location (i.e. the same cell). Therefore, the dot product is the number of cells which express both gene A and gene B.</p>
+<p>By taking this product of subsets of the discrete expression matrix, COMET then obtains the number of cells in the cluster that express both gene A and B, and the number of cells in the population that express A and B. This is done by limiting the columns of the discrete expression matrix to either the cells of the cluster, or the cells of the population respectively (where the population is the set of cells not in the cluster).</p>
+<p>In this way, COMET finds the <strong>k</strong> and <strong>M</strong> parameters for the hypergeometric test. The <strong>s</strong> and <strong>N</strong> parameters are easily found by counting cluster members. COMET can therefore calculate the hypergeometric statistic for a pair of genes.</p>
+</div>
+<div class="section" id="gene-combinations">
+<h3><a class="toc-backref" href="#id7">3+ gene combinations</a><a class="headerlink" href="#gene-combinations" title="Permalink to this headline">¶</a></h3>
+<p>Combinations of 3 or more genes are currently unimplemented in COMET. However, the hypergeometric parameters for 3+ gene combinations can be found by first considering a 2-gene subset of the combination. Take this 2-gene subset’s discrete expression matrix (i.e. the matrix with cells as columns and gene pairs as rows, with value 1 for a cell expressing both genes in the pair, and 0 otherwise), and multiply it by the transpose of the single-gene discrete expression matrix.</p>
+<p>This yields a matrix where each element is the number of cells which express the 3-gene combination correspond to its location’s gene pair and single gene; using this method, then, <strong>k</strong> and <strong>M</strong> can again be found.</p>
+</div>
+</div>
+<div class="section" id="run-hypergeometric-test-on-pairs-using-counts">
+<h2><a class="toc-backref" href="#id8">6. Run hypergeometric test on pairs using counts.</a><a class="headerlink" href="#run-hypergeometric-test-on-pairs-using-counts" title="Permalink to this headline">¶</a></h2>
+<p>Using these parameters, COMET then finds the hypergeometric test statistic for all possible gene pairs (including complement genes). The relevant test statistic is the ‘survival function’, which measures the probability that a randomly selected cluster of the same number of cells as our cluster of interest will have the same number or greater of expressing cells.</p>
+<p>The ‘best’ genes therefore minimize this statistic; COMET ranks all gene singletons/combinations by this statistic.</p>
+</div>
+<div class="section" id="calculate-true-positive-negative">
+<h2><a class="toc-backref" href="#id9">7. Calculate true positive/negative.</a><a class="headerlink" href="#calculate-true-positive-negative" title="Permalink to this headline">¶</a></h2>
+<p>Once COMET has calculated the hypergeometric statistic, it finds true positive and true negative rates associated with each gene singleton/combination, using the matrix products found earlier.</p>
+<p>True positive is found by dividing the number of expressing cells in the cluster by the total cell count of the cluster; true negative is found by dividing the number of expressing cells outside the cluster by the total cell count outside the cluster.</p>
+<p>Using the hypergeometric notation discussed earlier, we can write:</p>
+<div class="math notranslate nohighlight">
+\[\text{true positive} = \frac{k}{s} \quad \text{true negative} = \frac{M}{N}\]</div>
+</div>
+<div class="section" id="export-statistical-results">
+<h2><a class="toc-backref" href="#id10">8. Export statistical results.</a><a class="headerlink" href="#export-statistical-results" title="Permalink to this headline">¶</a></h2>
+<p>COMET’s statistical results are exported to two CSV files per cluster: one including statistical values for exclusively singletons, and one including all combinations. Rows are genes or gene combinations, columns are values associated with that gene/combination.</p>
+<p>The columns of the singleton statistical data are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">gene</span></code>: the name of the gene.</li>
+<li><code class="docutils literal notranslate"><span class="pre">HG_stat</span></code>: the hypergeometric test statistic. Genes are ranked using this value.</li>
+<li><code class="docutils literal notranslate"><span class="pre">mHG_pval</span></code>: the statistical significance of the cutoff which the XL-mHG test has chosen.</li>
+<li><code class="docutils literal notranslate"><span class="pre">mHG_cutoff_index</span></code>: the index which the XL-mHG has chosen, after sliding.</li>
+<li><code class="docutils literal notranslate"><span class="pre">mHG_cutoff_value</span></code>: the gene expression cutoff value corresponding to the chosen index.</li>
+<li><code class="docutils literal notranslate"><span class="pre">t_stat</span></code>: the t-test statistic.</li>
+<li><code class="docutils literal notranslate"><span class="pre">t_pval</span></code>: the t-test p significance value corresponding to the test statistic.</li>
+<li><code class="docutils literal notranslate"><span class="pre">TP</span></code>: the true positive rate.</li>
+<li><code class="docutils literal notranslate"><span class="pre">TN</span></code>: the true negative rate.</li>
+<li><code class="docutils literal notranslate"><span class="pre">rank</span></code>: sequential ranking based on <code class="docutils literal notranslate"><span class="pre">HG_stat</span></code>, where lower <code class="docutils literal notranslate"><span class="pre">HG_stat</span></code> is better ranking. No two genes are ranked the same; those with identical hypergeometric statistic values are ranked arbitrarily relative to one another.</li>
+</ul>
+<p>The columns of the combination statistical data are the same as those of the singleton data with some exceptions:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">gene</span></code> is replaced by <code class="docutils literal notranslate"><span class="pre">gene_1</span></code> and <code class="docutils literal notranslate"><span class="pre">gene_2</span></code> (combinations of 3+ genes are unimplemented as of yet).</li>
+<li><code class="docutils literal notranslate"><span class="pre">mHG_pval</span></code>, <code class="docutils literal notranslate"><span class="pre">mHG_cutoff_index</span></code>, <code class="docutils literal notranslate"><span class="pre">mHG_cutoff_value</span></code>, <code class="docutils literal notranslate"><span class="pre">t_stat</span></code>, and <code class="docutils literal notranslate"><span class="pre">t_pval</span></code> are omitted, since they are irrelevant to non-singletons.</li>
+</ul>
+</div>
+<div class="section" id="generate-and-export-visualizations">
+<h2><a class="toc-backref" href="#id11">9. Generate and export visualizations.</a><a class="headerlink" href="#generate-and-export-visualizations" title="Permalink to this headline">¶</a></h2>
+<p>For each cluster, COMET generates five PDF files containing visualizations of the statistical results. Each PDF``s name is prefixed by the cluster name, and includes visuals for only the first few highest ranked genes/combinations.</p>
+<p>The PDF files are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">(cluster)_combined.pdf</span></code>: compares discrete expression and continuous expression for each gene in a combination on a tSNE plot.</li>
+<li><code class="docutils literal notranslate"><span class="pre">(cluster)_discrete.pdf</span></code>: compares discrete expression of a gene combination with that of its components.</li>
+<li><code class="docutils literal notranslate"><span class="pre">(cluster)_TP_TN.pdf</span></code>: plots true positive/negative rates of each gene.</li>
+<li><code class="docutils literal notranslate"><span class="pre">(cluster)_singleton_combined.pdf</span></code>: same as the <code class="docutils literal notranslate"><span class="pre">combined</span></code> plot, but includes only singletons.</li>
+<li><code class="docutils literal notranslate"><span class="pre">(cluster)_singleton_TP_TN.pdf</span></code>: same as the <code class="docutils literal notranslate"><span class="pre">TP_TN</span></code> plot, but includes only singletons.</li>
+</ul>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">COMET</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Installation/Quickstart</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="manual.html">User Manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Details of operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="manual.html">User Manual</a><ul>
+      <li>Previous: <a href="background.html" title="previous chapter">Background</a></li>
+      <li>Next: <a href="usage.html" title="next chapter">Usage</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Aaron Yao-Smith.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/details.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

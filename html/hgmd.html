@@ -1,0 +1,474 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>hgmd.hgmd &#8212; COMET 0.1.0-alpha documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="_static/COMET_favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="hgmd.visualize" href="visualize.html" />
+    <link rel="prev" title="hgmd.__main__" href="main.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-hgmd.hgmd">
+<span id="hgmd-hgmd"></span><h1>hgmd.hgmd<a class="headerlink" href="#module-hgmd.hgmd" title="Permalink to this headline">¶</a></h1>
+<p>Set of modularized components of COMET’s HGMD testing.</p>
+<p>For marker expression, float comparisions are fuzzy to 1e-3.  Marker expression
+must therefore be normalized to a point where a difference of 0.001 is
+insignificant.  I.e. 15.001 and 15.000 are treated as equivalent expression
+values.</p>
+<dl class="function">
+<dt id="hgmd.hgmd.add_complements">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">add_complements</code><span class="sig-paren">(</span><em>marker_exp</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.add_complements" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds columns representing gene complement to a gene expression matrix.</p>
+<p>Gene complements are represented simplistically: gene expression values for
+a given gene X are multiplied by -1 and become a new column, labeled X_c.
+“High” expression values of X become “low” values of X_c, and vice versa,
+where discrete expression corresponds to a “high” value, and discrete
+non-expression to a “low” value.</p>
+<p>marker_exp should have cell row labels, gene column labels, gene expression
+float values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>marker_exp</strong> – gene expression DataFrame whose rows are cell
+identifiers, columns are gene identifiers, and values are float values
+representing gene expression.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A DataFrame of same format as marker_exp, but with a new column
+added for each existing column label, representing the column
+label gene’s complement.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">pandas.DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.batch_t">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">batch_t</code><span class="sig-paren">(</span><em>marker_exp</em>, <em>c_list</em>, <em>coi</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.batch_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies t test to a gene expression matrix, gene by gene.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>marker_exp</strong> – A DataFrame whose rows are cell identifiers, columns are
+gene identifiers, and values are float values representing gene
+expression.</li>
+<li><strong>c_list</strong> – A Series whose indices are cell identifiers, and whose
+values are the cluster which that cell is part of.</li>
+<li><strong>coi</strong> – The cluster of interest.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A matrix with arbitary row indices whose columns are the gene, t
+statistic, then t p-value; the last two being of float type.
+Their names are ‘gene’, ‘t_stat’ and ‘t_pval’.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.batch_xlmhg">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">batch_xlmhg</code><span class="sig-paren">(</span><em>marker_exp</em>, <em>c_list</em>, <em>coi</em>, <em>X=None</em>, <em>L=None</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.batch_xlmhg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies XL-mHG test to a gene expression matrix, gene by gene.</p>
+<p>Outputs a 3-column DataFrame representing statistical results of XL-mHG.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>marker_exp</strong> – A DataFrame whose rows are cell identifiers, columns are
+gene identifiers, and values are float values representing gene
+expression.</li>
+<li><strong>c_list</strong> – A Series whose indices are cell identifiers, and whose
+values are the cluster which that cell is part of.</li>
+<li><strong>coi</strong> – The cluster of interest.</li>
+<li><strong>X</strong> – An integer to be used as argument to the XL-mHG test.</li>
+<li><strong>L</strong> – An integer to be used as argument to the XL-mHG test.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A matrix with arbitrary row indices, whose columns are the gene
+name, stat, cutoff, and pval outputs of the XL-mHG test; of
+float, int, and float type respectively.  Their names are ‘gene’,
+‘HG_stat’, ‘mHG_cutoff’, and ‘mHG_pval’.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.discrete_exp">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">discrete_exp</code><span class="sig-paren">(</span><em>marker_exp</em>, <em>cutoff_val</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.discrete_exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a continuous gene expression matrix to discrete.</p>
+<p>As a note: cutoff values correspond to the “top” of non-expression.  Only
+cells expressing at values greater than the cutoff are marked as
+“expressing”; cells expressing at the cutoff exactly are not.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>marker_exp</strong> – A DataFrame whose rows are cell identifiers, columns are
+gene identifiers, and values are float values representing gene
+expression.</li>
+<li><strong>cutoff_val</strong> – A Series whose rows are gene identifiers, and values are
+cutoff values.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A gene expression matrix identical to marker_exp, but with
+boolean rather than float expression values.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.mhg_cutoff_value">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">mhg_cutoff_value</code><span class="sig-paren">(</span><em>marker_exp</em>, <em>cutoff_ind</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.mhg_cutoff_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds discrete expression cutoff value, from given cutoff index.</p>
+<p>The XL-mHG test outputs the index of the cutoff of highest significance
+between a sample and population.  This functions finds the expression value
+which corresponds to this index.  Cells above this value we define as
+expressing, and cells below this value we define as non-expressing.  We
+therefore choose this value to be between the expression at the index, and
+the expression of the “next-highest” cell.  I.e. for expression [3.0 3.0
+1.5 1.0 1.0] and index 4, we should choose a cutoff between 1 and 1.5. This
+implementation will add epsilon to the lower bound (i.e. the value of
+FLOAT_PRECISION).  In our example, the output will be 1.0 +
+FLOAT_PRECISION.  For FLOAT_PRECISION = 0.001, this is 1.001.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>marker_exp</strong> – A DataFrame whose rows are cell identifiers, columns are
+gene identifiers, and values are float values representing gene
+expression.</li>
+<li><strong>cutoff_ind</strong> – A DataFrame whose ‘gene’ column are gene identifiers,
+and whose ‘mHG_cutoff’ column are cutoff indices</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A DataFrame whose ‘gene’ column are gene identifiers, and whose
+‘cutoff_val’ column are cutoff values corresponding to input
+cutoff indices.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.mhg_slide">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">mhg_slide</code><span class="sig-paren">(</span><em>marker_exp</em>, <em>cutoff_val</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.mhg_slide" title="Permalink to this definition">¶</a></dt>
+<dd><p>Slides cutoff indices in XL-mHG output out of uniform expression groups.</p>
+<p>The XL-mHG test may place a cutoff index that “cuts” across a group of
+uniform expression inside the sorted expression list.  I.e. for a
+population of cells of which many have zero expression, the XL-mHG test may
+demand that we sample some of the zero-expression cells and not others.
+This is impossible because the cells are effectively identical.  This
+function therefore moves the XL-mHG cutoff index so that it falls on a
+measurable gene expression boundary.</p>
+<p>Example: for a sorted gene expression list [5, 4, 1, 0, 0, 0] and XL-mHG
+cutoff index 4, this function will “slide” the index to 3; marking the
+boundary between zero expression and expression value 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>marker_exp</strong> – A DataFrame whose rows are cell identifiers, columns are
+gene identifiers, and values are float values representing gene
+expression.</li>
+<li><strong>cutoff_val</strong> – A DataFrame whose ‘gene’ column are gene identifiers,
+and whose ‘cutoff_val’ column are cutoff values corresponding to input
+cutoff indices.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A DataFrame with ‘gene’, ‘mHG_cutoff’, and ‘cutoff_val’ columns,
+slid.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.pair_hg">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">pair_hg</code><span class="sig-paren">(</span><em>gene_map</em>, <em>in_cls_count</em>, <em>pop_count</em>, <em>in_cls_product</em>, <em>total_product</em>, <em>upper_tri_indices</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.pair_hg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds hypergeometric statistic of gene pairs.</p>
+<p>Takes in discrete single-gene expression matrix, and finds the
+hypergeometric p-value of the sample that includes cells which express both
+of a pair of genes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gene_map</strong> – An Index mapping index values to gene names.</li>
+<li><strong>in_cls_count</strong> – The number of cells in the cluster.</li>
+<li><strong>pop_count</strong> – The number of cells in the population.</li>
+<li><strong>in_cls_product</strong> – The cluster paired expression count matrix.</li>
+<li><strong>total_product</strong> – The population paired expression count matrix.</li>
+<li><strong>upper_tri_indices</strong> – An array specifying UT indices; from numpy.utri</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A matrix with columns: the two genes of the pair, hypergeometric
+test statistics for that pair.  Their names are ‘gene_1’,
+‘gene_2’, ‘HG_stat’.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.pair_product">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">pair_product</code><span class="sig-paren">(</span><em>discrete_exp</em>, <em>c_list</em>, <em>coi</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.pair_product" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds paired expression counts.  Returns in matrix form.</p>
+<p>The product of the transpose of the discrete_exp DataFrame is a matrix
+whose rows and columns correspond to individual genes.  Each value is the
+number of cells which express both genes (i.e. the dot product of two lists
+of 1s and 0s encoding expression/nonexpression for their respective genes
+in the population).  The product therefore encodes joint expression counts
+for any possible gene pair (including a single gene paired with itself).</p>
+<p>This function produces two matrices: one considering only cells inside the
+cluster of interest, and one considering all cells in the population.</p>
+<p>This function also produces a list mapping integer indices to gene names,
+and the population cell count.</p>
+<p>Additionally, only the upper triangular part of the output matrices is
+unique.  This function therefore also returns the upper triangular indices
+for use by other functions; this is a lazy workaround for the issue that
+comes with using columns ‘gene_1’ and ‘gene_2’ to store gene pairs; the
+gene pair (A, B) is therefore treated differently than (B, A).  Specifying
+the upper triangular part prevents (B, A) from existing.</p>
+<p>TODO: fix this redundancy using multi-indices</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>discrete_exp</strong> – A DataFrame whose rows are cell identifiers, columns
+are gene identifiers, and values are boolean values representing gene
+expression.</li>
+<li><strong>c_list</strong> – A Series whose indices are cell identifiers, and whose
+values are the cluster which that cell is part of.</li>
+<li><strong>coi</strong> – The cluster of interest.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">(gene mapping list, cluster count, total count, cluster paired
+expression count matrix, population paired expression count
+matrix, upper triangular matrix index)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(pandas.Index, int, int, numpy.ndarray, numpy.ndarray,
+numpy.ndarray)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.pair_tp_tn">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">pair_tp_tn</code><span class="sig-paren">(</span><em>gene_map</em>, <em>in_cls_count</em>, <em>pop_count</em>, <em>in_cls_product</em>, <em>total_product</em>, <em>upper_tri_indices</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.pair_tp_tn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds simple true positive/true negative values for the cluster of
+interest, for all possible pairs of genes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gene_map</strong> – An Index mapping index values to gene names.</li>
+<li><strong>in_cls_count</strong> – The number of cells in the cluster.</li>
+<li><strong>pop_count</strong> – The number of cells in the population.</li>
+<li><strong>in_cls_product</strong> – The cluster paired expression count matrix.</li>
+<li><strong>total_product</strong> – The population paired expression count matrix.</li>
+<li><strong>upper_tri_indices</strong> – An array specifying UT indices; from numpy.utri</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A matrix with arbitary row indices and 4 columns: containing the
+two genes of the pair, then true positive and true negative
+values respectively.  Their names are ‘gene_1’, ‘gene_2’, ‘TP’,
+and ‘TN’.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="hgmd.hgmd.tp_tn">
+<code class="descclassname">hgmd.hgmd.</code><code class="descname">tp_tn</code><span class="sig-paren">(</span><em>discrete_exp</em>, <em>c_list</em>, <em>coi</em><span class="sig-paren">)</span><a class="headerlink" href="#hgmd.hgmd.tp_tn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds simple true positive/true negative values for the cluster of
+interest.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>discrete_exp</strong> – A DataFrame whose rows are cell identifiers, columns
+are gene identifiers, and values are boolean values representing gene
+expression.</li>
+<li><strong>c_list</strong> – A Series whose indices are cell identifiers, and whose
+values are the cluster which that cell is part of.</li>
+<li><strong>coi</strong> – The cluster of interest.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A matrix with arbitary row indices, and has 3 columns: one for
+gene name, then 2 containing the true positive and true negative
+values respectively.  Their names are ‘gene’, ‘TP’, and ‘TN’.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas.DataFrame</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">COMET</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Installation/Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manual.html">User Manual</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="api.html">API reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="main.html">hgmd.__main__</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">hgmd.hgmd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualize.html">hgmd.visualize</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="api.html">API reference</a><ul>
+      <li>Previous: <a href="main.html" title="previous chapter">hgmd.__main__</a></li>
+      <li>Next: <a href="visualize.html" title="next chapter">hgmd.visualize</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Aaron Yao-Smith.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/hgmd.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
