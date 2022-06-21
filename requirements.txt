@@ -12,7 +12,7 @@ kiwisolver==1.0.1
 m2r==0.2.1
 matplotlib==3.0.1
 nbformat==4.4.0
-numpy==1.15.3
+numpy==1.22.0
 pandas==0.23.4
 plotly==2.7.0
 pyparsing==2.3.0
